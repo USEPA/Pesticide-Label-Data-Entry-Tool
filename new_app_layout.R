@@ -229,7 +229,7 @@ ui <- fluidPage(
     .navbar-brand { color: #000000 !important; font-weight: bold !important; }
   "),
   navbarPage(
-    title = "Pesticide Label Data Entry Tool",
+    title = "Pesticide Label Data Entry Toolz ",
     id = "navbar",
     tabPanel("Product-Level",
              div(class = "hdr",

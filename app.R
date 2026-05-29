@@ -10,7 +10,7 @@ library(tibble)
 library(shinyvalidate)
 
 # ---------------- CONFIG ----------------
-workbook_path <- "UST_Active Ingredient (PC Code) UST Report_Template_2.2026 (1).xlsx"
+workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
 
 # ---------------- Helpers ----------------
 `%||%` <- function(x, y) { if (is.null(x) || length(x) == 0) y else x }

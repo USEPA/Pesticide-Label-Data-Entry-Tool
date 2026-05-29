@@ -359,13 +359,30 @@ server <- function(input, output, session) {
     )
   })
   
-  # Linked product dropdown for scenarios
+  # Linked product dropdown for scenarios (hide Product_ID in label; EPA only, no PC Code)
   product_choices <- reactive({
     pd <- prod_dat()
     if (nrow(pd) == 0) return(setNames(character(0), character(0)))
-    lbl <- paste0(pd$Product_ID, " — ", pd$`AI Name`, " (PC ", pd$`PC Code`, ")")
+    
+    s <- function(x) ifelse(is.na(x) | x == "", "", as.character(x))
+    
+    ai  <- s(pd$`AI Name`)
+    epa <- if ("EPA Registration Number" %in% names(pd)) s(pd$`EPA Registration Number`) else ""
+    
+    # Build label: "AI Name (EPA <num>)" if EPA present, otherwise just AI Name
+    lbl <- ifelse(nzchar(epa) & nzchar(ai),
+                  paste0(ai, " (EPA Reg #", epa, ")"),
+                  ifelse(nzchar(ai),
+                         ai,
+                         ifelse(nzchar(epa), paste0("EPA Reg #", epa), "")))
+    
+    # Fallback if both are blank
+    lbl[!nzchar(lbl)] <- paste0("Product ", pd$Product_ID)
+    
+    # Show labels; keep values as Product_ID
     setNames(pd$Product_ID, lbl)
   })
+  
   output$current_product_ui <- renderUI({
     ch <- product_choices()
     default_sel <- if (length(ch)) unname(tail(ch, 1)) else NULL
@@ -768,16 +785,37 @@ server <- function(input, output, session) {
   })
   
   # ----- Tables -----
-  output$tbl_prod <- renderDT({
+  output$tbl_prod <- DT::renderDT({
     dat <- prod_dat()
     req(ncol(dat) > 0)
-    datatable(dat, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE, selection = "multiple")
+    df <- as.data.frame(dat)
+    prod_idx <- which(names(df) == "Product_ID")
+    
+    opts <- list(pageLength = 10, scrollX = TRUE)
+    if (length(prod_idx) == 1) {
+      # hide Product_ID column (DataTables uses 0-based indexes)
+      opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
+    }
+    
+    DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
+  
   output$tbl_scen <- renderDT({
     dat <- scen_dat()
     req(ncol(dat) > 0)
-    DT::datatable(as.data.frame(dat), options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE, selection = "multiple")
+    df <- as.data.frame(dat)
+    prod_idx <- which(names(df) == "Product_ID")
+    
+    opts <- list(pageLength = 10, scrollX = TRUE)
+    if (length(prod_idx) == 1) {
+      # DataTables uses 0-based column indexes
+      opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
+    }
+    
+    DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
+  
+  
   
   # ----- Downloads -----
   output$dl_prod <- downloadHandler(

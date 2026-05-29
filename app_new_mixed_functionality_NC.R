@@ -224,89 +224,126 @@ scenario_textarea_label <- "Other Site/Scenario Specific Restrictions & Limitati
 scenario_textarea_id    <- "scen__Other_Site_Scenario_Specific_Restrictions_Limitations"
 
 # ---------------- UI ----------------
+# Define the UI
 ui <- fluidPage(
   tags$head(
     tags$style(HTML("
-      #upperResizable {
+      #resizable {
         resize: vertical;
         overflow: auto;
         border: 1px solid #ddd;
         padding: 10px;
-        height: auto; /* Allows the div to take the size of its content */
-      .tab-content {
-        min-height: 50px; /* Ensures some min height */
+        height: auto;
+        /* height: 75vh;  Default height as 75% of the viewport height */
       }
     ")),
-    
-  tags$style(type = "text/css", "
-    .navbar-brand { color: #000000 !important; font-weight: bold !important; }
-  ")
+    tags$style(HTML("
+    /* Adjust the header font size */
+    table.dataTable thead th {
+      font-size: 11px; /* Adjust as needed */
+      color: #333; /* Optional: Change text color */
+    }
+  "))
   ),
-  div(id="upperResizable",
-  navbarPage(
-    title = "Pesticide Label Data Entry Tool",
-    id = "navbar",
-    tabPanel("Product-Level",
-             div(class = "hdr",
-                 h4("Product-Level"),
-                 br(),
-                 fluidRow(
-                   column(4,
-                          actionButton("reload", "Reload workbook"),
-                          actionButton("clear_prod", "Clear form", class = "ms-1"),
-                          actionButton("add_prod", "Add row", class = "btn-primary ms-1"),
-                          hr(),
-                          uiOutput("product_form_col1")
-                   ),
-                   column(4, uiOutput("product_form_col2")),
-                   column(4, uiOutput("product_form_col3"))
+  # Custom style for the navbar brand
+  tags$style(type = "text/css", "
+    .navbar-brand {
+      color: #000000 !important;
+      font-weight: bold !important;
+    }
+  "),
+  tags$head(
+    tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png")
+  ),
+  # NavbarPage for tab navigation
+  div(id = "resizable",
+      navbarPage(
+        title = div(
+          tags$img(src = "PLDET_icon.png", height = "30px", style = "vertical-align: middle;left-margin:1px"), # Add the icon
+          "Pesticide Label Data Entry Tool"
+        ),
+        id = "navbar",
+        
+        # Product-Level tab
+        tabPanel("Product-Level",value="product",
+                 div(class = "hdr",
+                     h4("Product-Level"),
+                     br(),
+                     fluidRow(
+                       column(4,
+                              actionButton("reload", "Reload workbook",icon=icon("redo")),
+                              actionButton("clear_prod", "Clear form",icon=icon("eraser"), class = "ms-1"),
+                              actionButton("add_prod", "Add row", class = "btn-primary ms-1",icon=icon("plus")),
+                              hr(),
+                              uiOutput("product_form_col1")
+                       ),
+                       column(4,
+                              uiOutput("product_form_col2")
+                       ),
+                       column(4,uiOutput("product_form_col3"))
+                     )
                  )
-             )
-    ),
-    tabPanel("Scenario-Level",
-             div(class = "hdr",
-                 fluidRow(
-                   column(4,
-                          h4("Scenario-Level"),
-                          uiOutput("current_product_ui"),
-                          br(),
-                          actionButton("relink_all", "Relink all scenarios", class = "btn-outline-secondary"),
-                          actionButton("clear_scen", "Clear form"),
-                          actionButton("add_scen", "Add row", class = "btn-primary"),
-                          hr(),
-                          uiOutput("scenario_form_col1")
-                   ),
-                   column(4, uiOutput("scenario_form_col2")),
-                   column(4, uiOutput("scenario_form_col3"))
+        ),
+        
+        tabPanel("Scenario-Level",value="scenario",
+                 div(class = "hdr",
+                     fluidRow(  # Fixed incorrect nesting and added fluidRow
+                       column(4,
+                              h4("Scenario-Level"),
+                              uiOutput("current_product_ui"),
+                              br(),
+                              actionButton("relink_all", "Relink all scenarios", class = "btn-outline-secondary",icon=icon("sync-alt")),
+                              actionButton("clear_scenario", "Clear form",icon=icon("eraser")),
+                              actionButton("add_scen", "Add row", class = "btn-primary",icon=icon("plus")),
+                              hr(),
+                              uiOutput("scenario_form_col1")
+                       ),
+                       column(4,
+                              
+                              uiOutput("scenario_form_col2")
+                       ),
+                       column(4,
+                              uiOutput("scenario_form_col3")
+                       )
+                     )
                  )
-             )
-    )
-  )
-),
+        )
+      )
+  ),
+  # Fluid layout for the data table tabs
   fluidRow(
-    column(12,
-           tags$hr(style = "border-top: 2px solid #333; margin-top: 20px;"),
-           tabsetPanel(
-             id = "data_tables",
-             tabPanel("Product-Level Table",
-                      div(class = "mb-2",
-                          actionButton("del_prod", "Delete selected…", class = "btn-danger me-2"),
-                          downloadButton("dl_prod", "Download product-level CSV")
-                      ),
-                      DTOutput("tbl_prod")
-             ),
-             tabPanel("Scenario-Level Table",
-                      div(class = "mb-2",
-                          actionButton("clone_to_form", "Load selected to form", class = "btn-secondary me-2"),
-                          actionButton("dup_scen", "Duplicate selected", class = "btn-outline-secondary me-2"),
-                          actionButton("del_scen", "Delete selected", class = "btn-danger me-2"),
-                          downloadButton("dl_scen", "Download scenario-level CSV")
-                      ),
-                      DTOutput("tbl_scen")
-             )
-           )
-    )
-  )
+    #div(id = "resizable",
+    column(12, 
+           tags$hr(style = "border-top: 2px solid #333; margin-top: 10px;"),
+           tabsetPanel(id = "data_tables",
+                       tabPanel("Product-Level Table",value="product",
+                                div(class = "mb-2",style="margin-top:10px",
+                                    actionButton("del_prod", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")
+                                    
+                                ),
+                                div(style="margin-top:5px",
+                                    DTOutput("tbl_prod")),
+                                downloadButton("dl_prod", "Download product-level CSV")
+                       ),
+                       
+                       tabPanel("Scenario-Level Table",value="scenario",
+                                div(class = "mb-2", style="margin-top:10px",
+                                    actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
+                                    actionButton("dup_scen", "Duplicate selected",icon = icon("copy"), class = "btn-outline-secondary me-2"),
+                                    actionButton("del_scen", "Delete selected", icon = icon("remove"),class = "btn-danger me-2")
+                                ),
+                                div(style="margin-top:5px",
+                                    DTOutput("tbl_scen")),
+                                div(style="float: left;",
+                                    downloadButton("dl_scen", "Download scenario-level CSV"))
+                                
+                                
+                                
+                       )
+           )  # Close tabsetPanel
+    )  # Close column(12
+  )  # Close fluidRow
+  #)# close div
 )
 
 # ---------------- Server ----------------

@@ -10,13 +10,8 @@ library(tibble)
 library(shinyvalidate)
 
 ## For publishing directly from GitHub to Posit
-#library(rsconnect)
-
-## For each deployment, run the line below to create manifest and make sure this file is on the GitHub repo you want to deploy from
-#rsconnect::writeManifest()
-
-#Change test June2026
-
+# library(rsconnect)
+# rsconnect::writeManifest()
 
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
@@ -42,7 +37,7 @@ extract_number <- function(x) {
   suppressWarnings(as.numeric(num))
 }
 
-# ---------------- Read vocab from workbook (pipe-free) ----------------
+# ---------------- Read vocab from workbook ----------------
 read_vocab_col <- function(path, sheet, col_name) {
   dat <- suppressMessages(read_excel(path, sheet = sheet))
   if (!col_name %in% names(dat)) return(character(0))
@@ -115,7 +110,25 @@ weight_units <- c("lb", "oz", "kg", "g")
 volume_units <- c("gal", "qt", "L", "mL", "fl oz")
 area_units   <- c("ac", "ha")
 
-# ---------- UI: numeric + numerator-unit + area-unit ----------
+scenario_area_rate_allowed <- list(
+  "Min Diluent Quantity (Gal Spray Soln per Acre)" = list(allow_weight = FALSE, allow_volume = TRUE),
+  "Product Max App Rate/Area"                      = list(allow_weight = TRUE,  allow_volume = TRUE),
+  "AI Max Rate/App"                                = list(allow_weight = TRUE,  allow_volume = FALSE),
+  "Product Max Rate/Year"                          = list(allow_weight = TRUE,  allow_volume = TRUE),
+  "Product Max Rate/Crop Cycle"                    = list(allow_weight = TRUE,  allow_volume = TRUE),
+  "AI Max Rate/Year"                               = list(allow_weight = TRUE,  allow_volume = FALSE),
+  "AI Max Rate/Cycle"                              = list(allow_weight = TRUE,  allow_volume = FALSE)
+)
+
+unit_choices_for_field <- function(field) {
+  allow <- scenario_area_rate_allowed[[field]] %||% list(allow_weight = TRUE, allow_volume = TRUE)
+  unique(c(
+    if (isTRUE(allow$allow_weight)) weight_units else character(0),
+    if (isTRUE(allow$allow_volume)) volume_units else character(0)
+  ))
+}
+
+# ---------- UI: numeric + numerator-unit + area-unit (open selectize) ----------
 make_area_rate_input <- function(field_label,
                                  default_num_unit = "lb",
                                  default_area_unit = "ac",
@@ -128,7 +141,6 @@ make_area_rate_input <- function(field_label,
   num_choices   <- c(if (allow_weight) weight_units else character(0),
                      if (allow_volume) volume_units else character(0))
   num_choices   <- unique(num_choices)
-  
   if (!default_num_unit %in% num_choices) {
     default_num_unit <- if (allow_weight) "lb" else if (allow_volume) "gal" else num_choices[1]
   }
@@ -141,32 +153,36 @@ make_area_rate_input <- function(field_label,
             numericInput(input_id, label = NULL, value = NA_real_, width = "100%")),
         div(class = "input-group-text p-0 border-0",
             style = "display:flex; align-items:center; gap:6px; padding-right:0.5rem;",
-            selectInput(numunit_id, label = NULL, choices = num_choices,
-                        selected = default_num_unit, width = "120px"),
+            selectizeInput(
+              numunit_id, label = NULL, choices = num_choices,
+              selected = default_num_unit, width = "120px",
+              options = list(create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE)
+            ),
             span("/"),
-            selectInput(areaunit_id, label = NULL, choices = area_units,
-                        selected = default_area_unit, width = "90px")
+            selectizeInput(
+              areaunit_id, label = NULL, choices = area_units,
+              selected = default_area_unit, width = "90px",
+              options = list(create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE)
+            )
         )
     )
   )
 }
 
-# ---------- Parser to restore units from a stored string ----------
-# Accepts "2 lb/ac", "1.5 fl oz/ac", "1 lb ai/ac" (strips 'ai')
+# ---------- Parser to restore units (preserves custom units) ----------
 parse_rate_units <- function(x, default_num = "lb", default_area = "ac") {
   s <- as.character(x %||% "")
   rest <- sub("^\\s*-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\s*", "", s, perl = TRUE)
   parts <- strsplit(rest, "/", fixed = TRUE)[[1]]
-  numu <- trimws(if (length(parts) >= 1) parts[1] else default_num)
+  numu  <- trimws(if (length(parts) >= 1) parts[1] else default_num)
   areau <- trimws(if (length(parts) >= 2) parts[2] else default_area)
   numu <- sub("\\s+ai\\b.*$", "", numu, perl = TRUE)
-  if (!numu %in% c(weight_units, volume_units)) numu <- default_num
-  if (!areau %in% area_units) areau <- default_area
+  if (!nzchar(numu))  numu  <- default_num
+  if (!nzchar(areau)) areau <- default_area
   list(num = numu, area = areau)
 }
 
 # ---------------- Field lists ----------------
-# Product field order
 product_fields <- c(
   "EPA Registration Number",
   "AI Name",
@@ -179,7 +195,6 @@ product_fields <- c(
   "Product-level PPE"
 )
 
-# Scenario fields (EPA Registration Number is NOT at scenario level)
 scenario_fields <- c(
   "Crop Use Site","Non Crop Use Site",
   "Location","App Target","App Type","App Equipment Type",
@@ -208,7 +223,6 @@ scenario_picklist_fields <- c(
 
 scenario_numeric_fields <- c("Buffered Area (ft)")
 
-# Area-based fields WITH selectable units
 scenario_area_rate_fields <- c(
   "Min Diluent Quantity (Gal Spray Soln per Acre)",
   "Product Max App Rate/Area",
@@ -233,7 +247,6 @@ scenario_textarea_label <- "Other Site/Scenario Specific Restrictions & Limitati
 scenario_textarea_id    <- "scen__Other_Site_Scenario_Specific_Restrictions_Limitations"
 
 # ---------------- UI ----------------
-# Define the UI
 ui <- fluidPage(
   tags$head(
     tags$style(HTML("
@@ -243,116 +256,95 @@ ui <- fluidPage(
         border: 1px solid #ddd;
         padding: 10px;
         height: auto;
-        /* height: 75vh;  Default height as 75% of the viewport height */
       }
     ")),
     tags$style(HTML("
-    /* Adjust the header font size */
-    table.dataTable thead th {
-      font-size: 11px; /* Adjust as needed */
-      color: #333; /* Optional: Change text color */
-    }
-  "))
+      table.dataTable thead th {
+        font-size: 11px;
+        color: #333;
+      }
+    "))
   ),
-  # Custom style for the navbar brand
   tags$style(type = "text/css", "
-    .navbar-brand {
-      color: #000000 !important;
-      font-weight: bold !important;
-    }
+    .navbar-brand { color: #000000 !important; font-weight: bold !important; }
   "),
-  tags$head(
-    tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png")
-  ),
-  # NavbarPage for tab navigation
-  div(id = "resizable",
-      navbarPage(
-        title = div(
-          tags$img(src = "PLDET_icon.png", height = "30px", style = "vertical-align: middle;left-margin:1px"), # Add the icon
-          "Pesticide Label Data Entry Tool"
-        ),
-        id = "navbar",
-        
-        # Product-Level tab
-        tabPanel("Product-Level",value="product",
-                 div(class = "hdr",
-                     h4("Product-Level"),
-                     br(),
-                     fluidRow(
-                       column(4,
-                              actionButton("reload", "Reload workbook",icon=icon("redo")),
-                              actionButton("clear_prod", "Clear form",icon=icon("eraser"), class = "ms-1"),
-                              actionButton("add_prod", "Add row", class = "btn-primary ms-1",icon=icon("plus")),
-                              hr(),
-                              uiOutput("product_form_col1")
-                       ),
-                       column(4,
-                              uiOutput("product_form_col2")
-                       ),
-                       column(4,uiOutput("product_form_col3"))
-                     )
-                 )
-        ),
-        
-        tabPanel("Scenario-Level",value="scenario",
-                 div(class = "hdr",
-                     fluidRow(  # Fixed incorrect nesting and added fluidRow
-                       column(4,
-                              h4("Scenario-Level"),
-                              uiOutput("current_product_ui"),
-                              br(),
-                              actionButton("relink_all", "Relink all scenarios", class = "btn-outline-secondary",icon=icon("sync-alt")),
-                              actionButton("clear_scenario", "Clear form",icon=icon("eraser")),
-                              actionButton("add_scen", "Add row", class = "btn-primary",icon=icon("plus")),
-                              hr(),
-                              uiOutput("scenario_form_col1")
-                       ),
-                       column(4,
-                              
-                              uiOutput("scenario_form_col2")
-                       ),
-                       column(4,
-                              uiOutput("scenario_form_col3")
-                       )
-                     )
-                 )
+  tags$head(tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png")),
+  div(
+    id = "resizable",
+    navbarPage(
+      title = div(
+        tags$img(src = "PLDET_icon.png", height = "30px", style = "vertical-align: middle;left-margin:1px"),
+        "Pesticide Label Data Entry Tool"
+      ),
+      id = "navbar",
+      tabPanel(
+        "Product-Level", value = "product",
+        div(
+          class = "hdr",
+          h4("Product-Level"),
+          br(),
+          fluidRow(
+            column(
+              4,
+              actionButton("reload", "Reload workbook", icon = icon("redo")),
+              actionButton("clear_prod", "Clear form", icon = icon("eraser"), class = "ms-1"),
+              actionButton("add_prod", "Add row", class = "btn-primary ms-1", icon = icon("plus")),
+              hr(),
+              uiOutput("product_form_col1")
+            ),
+            column(4, uiOutput("product_form_col2")),
+            column(4, uiOutput("product_form_col3"))
+          )
+        )
+      ),
+      tabPanel(
+        "Scenario-Level", value = "scenario",
+        div(
+          class = "hdr",
+          fluidRow(
+            column(
+              4,
+              h4("Scenario-Level"),
+              uiOutput("current_product_ui"),
+              br(),
+              actionButton("relink_selected", "Relink selected scenarios", class = "btn-outline-secondary", icon = icon("sync-alt")),
+              actionButton("clear_scenario", "Clear form", icon = icon("eraser")),
+              actionButton("add_scen", "Add row", class = "btn-primary", icon = icon("plus")),
+              hr(),
+              uiOutput("scenario_form_col1")
+            ),
+            column(4, uiOutput("scenario_form_col2")),
+            column(4, uiOutput("scenario_form_col3"))
+          )
         )
       )
+    )
   ),
-  # Fluid layout for the data table tabs
   fluidRow(
-    #div(id = "resizable",
-    column(12, 
-           tags$hr(style = "border-top: 2px solid #333; margin-top: 10px;"),
-           tabsetPanel(id = "data_tables",
-                       tabPanel("Product-Level Table",value="product",
-                                div(class = "mb-2",style="margin-top:10px",
-                                    actionButton("del_prod", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")
-                                    
-                                ),
-                                div(style="margin-top:5px",
-                                    DTOutput("tbl_prod")),
-                                downloadButton("dl_prod", "Download product-level CSV")
-                       ),
-                       
-                       tabPanel("Scenario-Level Table",value="scenario",
-                                div(class = "mb-2", style="margin-top:10px",
-                                    actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
-                                    actionButton("dup_scen", "Duplicate selected",icon = icon("copy"), class = "btn-outline-secondary me-2"),
-                                    actionButton("del_scen", "Delete selected", icon = icon("remove"),class = "btn-danger me-2")
-                                ),
-                                div(style="margin-top:5px",
-                                    DTOutput("tbl_scen")),
-                                div(style="float: left;",
-                                    downloadButton("dl_scen", "Download scenario-level CSV"))
-                                
-                                
-                                
-                       )
-           )  # Close tabsetPanel
-    )  # Close column(12
-  )  # Close fluidRow
-  #)# close div
+    column(
+      12,
+      tags$hr(style = "border-top: 2px solid #333; margin-top: 10px;"),
+      tabsetPanel(
+        id = "data_tables",
+        tabPanel(
+          "Product-Level Table", value = "product",
+          div(class = "mb-2", style = "margin-top:10px",
+              actionButton("del_prod", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")),
+          div(style = "margin-top:5px", DTOutput("tbl_prod")),
+          downloadButton("dl_prod", "Download product-level CSV")
+        ),
+        tabPanel(
+          "Scenario-Level Table", value = "scenario",
+          div(class = "mb-2", style = "margin-top:10px",
+              actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
+              actionButton("dup_scen", "Duplicate selected", icon = icon("copy"), class = "btn-outline-secondary me-2"),
+              actionButton("del_scen", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")),
+          div(style = "margin-top:5px", DTOutput("tbl_scen")),
+          div(style = "float: left;", downloadButton("dl_scen", "Download scenario-level CSV"))
+        )
+      )
+    )
+  )
 )
 
 # ---------------- Server ----------------
@@ -421,35 +413,23 @@ server <- function(input, output, session) {
     )
   })
   
-  # Linked product dropdown for scenarios (hide Product_ID in label; EPA only, no PC Code)
+  # Linked product dropdown for scenarios
   product_choices <- reactive({
     pd <- prod_dat()
     if (nrow(pd) == 0) return(setNames(character(0), character(0)))
-    
     s <- function(x) ifelse(is.na(x) | x == "", "", as.character(x))
-    
     ai  <- s(pd$`AI Name`)
     epa <- if ("EPA Registration Number" %in% names(pd)) s(pd$`EPA Registration Number`) else ""
-    
-    # Build label: "AI Name (EPA <num>)" if EPA present, otherwise just AI Name
     lbl <- ifelse(nzchar(epa) & nzchar(ai),
                   paste0(ai, " (EPA Reg #", epa, ")"),
-                  ifelse(nzchar(ai),
-                         ai,
-                         ifelse(nzchar(epa), paste0("EPA Reg #", epa), "")))
-    
-    # Fallback if both are blank
+                  ifelse(nzchar(ai), ai, ifelse(nzchar(epa), paste0("EPA Reg #", epa), "")))
     lbl[!nzchar(lbl)] <- paste0("Product ", pd$Product_ID)
-    
-    # Show labels; keep values as Product_ID
     setNames(pd$Product_ID, lbl)
   })
-  
   output$current_product_ui <- renderUI({
     ch <- product_choices()
     default_sel <- if (length(ch)) unname(tail(ch, 1)) else NULL
-    selectInput("current_product", "Linked product",
-                choices = ch, selected = default_sel, width = "260px")
+    selectInput("current_product", "Linked product", choices = ch, selected = default_sel, width = "260px")
   })
   
   # ----- Scenario form (3 columns) -----
@@ -475,16 +455,12 @@ server <- function(input, output, session) {
         default_num_unit  = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$num,
         default_area_unit = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
-      ),)
+      )
+    )
   })
-  
   output$scenario_form_col2 <- renderUI({
     req(vocab())
     tagList(
-      
-      # Split-unit helpers (column 2)
-      
-      
       make_area_rate_input(
         "AI Max Rate/App",
         default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/App"]]$num,
@@ -519,21 +495,15 @@ server <- function(input, output, session) {
       ),
       make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__"),
       make_input("RTI (d)", "text", prefix = "scen__"),
-      make_input("REI (H)", "text", prefix = "scen__"),
+      make_input("REI (H)", "text", prefix = "scen__")
     )
   })
-  
   output$scenario_form_col3 <- renderUI({
     req(vocab())
     tagList(
-      # Split-unit helpers (column 3)
-      # Added back FGJ 5/12
-      
       make_input("PHI (d)", "text", prefix = "scen__"),
       make_input("PGI (d)", "text", prefix = "scen__"),
       make_input("PSI (d)", "text", prefix = "scen__"),
-      
-      # Other pick/num/text fields already present
       make_input("ASABE Droplet Size", "pick", choices = vocab()[["ASABE Droplet Size"]], prefix = "scen__", multiple = TRUE),
       make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
       make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE),
@@ -541,24 +511,15 @@ server <- function(input, output, session) {
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
       make_input("Site-Level ALLOWED Geographic Area", "pick", choices = vocab()[["Site-Level ALLOWED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
-      
-      # Added back FGJ 5/12
       make_input("Max Release Height", "text", prefix = "scen__"),
       make_input("Max Wind Speed (mph)", "text", prefix = "scen__"),
-      
-      # Notes
-      textAreaInput(
-        inputId = scenario_textarea_id,
-        label = scenario_textarea_label,
-        value = "", rows = 4, resize = "vertical", width = "100%"
-      )
+      textAreaInput(inputId = scenario_textarea_id, label = scenario_textarea_label, value = "", rows = 4, resize = "vertical", width = "100%")
     )
   })
   
   # ----- Validation -----
   iv <- shinyvalidate::InputValidator$new()
   session$onFlushed(function() {
-    # Area-rate numeric fields
     for (f in scenario_area_rate_fields) {
       id <- paste0("scen__", idsafe(f))
       iv$add_rule(id, function(value) {
@@ -568,7 +529,6 @@ server <- function(input, output, session) {
         NULL
       })
     }
-    # Plain numeric fields
     for (f in scenario_numeric_fields) {
       id <- paste0("scen__", idsafe(f))
       iv$add_rule(id, function(value) {
@@ -588,7 +548,6 @@ server <- function(input, output, session) {
     vals <- map_chr(vals, collapse_multi)
     tibble(!!!setNames(vals, fields))
   }
-  
   collect_scenario_row <- function(input, fields, prefix,
                                    area_rate_fields,
                                    area_rate_defaults,
@@ -665,12 +624,10 @@ server <- function(input, output, session) {
       prod_row <- pd %>%
         dplyr::filter(Product_ID == cur_prod) %>%
         dplyr::select(Product_ID, dplyr::all_of(product_fields))
-      
       if (nrow(prod_row) != 1) {
         showNotification(sprintf("Expected 1 product row for '%s', found %d.", cur_prod, nrow(prod_row)), type = "error")
         return()
       }
-      
       new_row <- dplyr::bind_cols(prod_row[1, , drop = FALSE], scen_row)
       sd_new <- dplyr::bind_rows(scen_dat(), new_row)
       scen_dat(sd_new)
@@ -680,27 +637,34 @@ server <- function(input, output, session) {
     })
   })
   
-  observeEvent(input$relink_all, {
+  observeEvent(input$relink_selected, {
     pd <- prod_dat()
     sd <- scen_dat()
     cur_prod <- input$current_product
+    sel <- input$tbl_scen_rows_selected
     if (nrow(pd) == 0 || is.null(cur_prod) || !any(pd$Product_ID == cur_prod)) {
       showNotification("Select a product to relink to.", type = "warning")
       return()
     }
     if (nrow(sd) == 0) {
-      showNotification("No scenario rows to relink.", type = "warning"); return()
+      showNotification("No scenario rows to relink.", type = "warning")
+      return()
+    }
+    if (length(sel) == 0) {
+      showNotification("Select one or more scenario rows in the table to relink.", type = "warning")
+      return()
     }
     pd_sel <- pd %>%
       dplyr::filter(Product_ID == cur_prod) %>%
       dplyr::select(Product_ID, dplyr::all_of(product_fields))
-    for (col in c("Product_ID", product_fields)) {
+    cols_to_update <- c("Product_ID", product_fields)
+    for (col in cols_to_update) {
       if (!col %in% names(sd)) sd[[col]] <- NA_character_
-      sd[[col]] <- pd_sel[[col]][1]
+      sd[sel, col] <- pd_sel[[col]][1]
     }
     sd <- sd %>% dplyr::select(Product_ID, dplyr::all_of(product_fields), dplyr::everything())
     scen_dat(sd)
-    showNotification("All scenario rows relinked to the selected product.", type = "message")
+    showNotification(sprintf("Relinked %d selected scenario row(s) to the chosen product.", length(sel)), type = "message")
   })
   
   observeEvent(input$dup_scen, {
@@ -723,14 +687,9 @@ server <- function(input, output, session) {
     }
     sd <- scen_dat()
     row <- sd[sel, , drop = FALSE]
-    
     if ("Product_ID" %in% names(row)) {
-      updateSelectInput(session, "current_product",
-                        choices = product_choices(),
-                        selected = row$Product_ID[1])
+      updateSelectInput(session, "current_product", choices = product_choices(), selected = row$Product_ID[1])
     }
-    
-    # Restore multi-select picklists
     for (nm in scenario_picklist_fields) {
       id <- paste0("scen__", idsafe(nm))
       vals <- split_multi(row[[nm]][1] %||% "")
@@ -739,44 +698,35 @@ server <- function(input, output, session) {
       ch <- c(ch, missing)
       try(updateSelectizeInput(session, id, choices = ch, selected = vals), silent = TRUE)
     }
-    # Numeric-only
     for (nm in scenario_numeric_fields) {
       id <- paste0("scen__", idsafe(nm))
       val_num <- extract_number(row[[nm]][1] %||% "")
       try(updateNumericInput(session, id, value = val_num), silent = TRUE)
     }
-    # Area-rate fields: restore numeric and unit selectors
     for (nm in scenario_area_rate_fields) {
-      base_id    <- paste0("scen__", idsafe(nm))
-      numunit_id <- paste0(base_id, "__numunit")
-      areaunit_id<- paste0(base_id, "__areaunit")
+      base_id     <- paste0("scen__", idsafe(nm))
+      numunit_id  <- paste0(base_id, "__numunit")
+      areaunit_id <- paste0(base_id, "__areaunit")
       raw <- row[[nm]][1] %||% ""
       val_num <- extract_number(raw)
-      units <- parse_rate_units(
-        raw,
-        default_num  = scenario_area_rate_defaults[[nm]]$num,
-        default_area = scenario_area_rate_defaults[[nm]]$area
-      )
+      units <- parse_rate_units(raw,
+                                default_num  = scenario_area_rate_defaults[[nm]]$num,
+                                default_area = scenario_area_rate_defaults[[nm]]$area)
+      num_choices  <- unique(c(unit_choices_for_field(nm), units$num))
+      area_choices <- unique(c(area_units, units$area))
       try(updateNumericInput(session, base_id, value = val_num), silent = TRUE)
-      try(updateSelectInput(session, numunit_id, selected = units$num),  silent = TRUE)
-      try(updateSelectInput(session, areaunit_id, selected = units$area), silent = TRUE)
+      try(updateSelectizeInput(session, numunit_id, choices = num_choices, selected = units$num),  silent = TRUE)
+      try(updateSelectizeInput(session, areaunit_id, choices = area_choices, selected = units$area), silent = TRUE)
     }
-    
-    # Remaining text fields
-    text_fields <- setdiff(scenario_fields,
-                           c(scenario_picklist_fields, scenario_numeric_fields, scenario_area_rate_fields))
+    text_fields <- setdiff(scenario_fields, c(scenario_picklist_fields, scenario_numeric_fields, scenario_area_rate_fields))
     for (nm in text_fields) {
       id <- paste0("scen__", idsafe(nm))
       val <- row[[nm]][1] %||% ""
       try(updateTextInput(session, id, value = val), silent = TRUE)
     }
-    # Text area
     if (scenario_textarea_label %in% names(row)) {
-      try(updateTextAreaInput(session, scenario_textarea_id,
-                              value = row[[scenario_textarea_label]][1] %||% ""),
-          silent = TRUE)
+      try(updateTextAreaInput(session, scenario_textarea_id, value = row[[scenario_textarea_label]][1] %||% ""), silent = TRUE)
     }
-    
     showNotification("Scenario loaded into form. Edit fields and click 'Add row' to save as a new scenario.", type = "message")
   })
   
@@ -791,7 +741,6 @@ server <- function(input, output, session) {
     ids_to_delete <- pd$Product_ID[sel]
     sd <- scen_dat()
     n_linked <- if ("Product_ID" %in% names(sd)) sum(sd$Product_ID %in% ids_to_delete) else 0
-    
     showModal(modalDialog(
       title = "Confirm deletion",
       size = "m",
@@ -807,7 +756,6 @@ server <- function(input, output, session) {
       easyClose = FALSE
     ))
   })
-  
   observeEvent(input$confirm_delete_products, {
     removeModal()
     pd <- prod_dat()
@@ -815,23 +763,15 @@ server <- function(input, output, session) {
     sel <- input$tbl_prod_rows_selected
     if (length(sel) == 0) return()
     ids_to_delete <- pd$Product_ID[sel]
-    
     if (isTRUE(input$delete_linked) && "Product_ID" %in% names(sd)) {
       sd <- sd %>% dplyr::filter(!(Product_ID %in% ids_to_delete))
       scen_dat(sd)
     }
-    
     pd <- pd[-sel, , drop = FALSE]
     prod_dat(pd)
-    
-    updateSelectInput(session, "current_product",
-                      choices = product_choices(),
-                      selected = unname(tail(product_choices(), 1)))
-    
+    updateSelectInput(session, "current_product", choices = product_choices(), selected = unname(tail(product_choices(), 1)))
     showNotification(
-      sprintf("Deleted %d product row(s)%s.",
-              length(sel),
-              if (isTRUE(input$delete_linked)) " and linked scenarios" else ""),
+      sprintf("Deleted %d product row(s)%s.", length(sel), if (isTRUE(input$delete_linked)) " and linked scenarios" else ""),
       type = "message"
     )
   })
@@ -854,100 +794,88 @@ server <- function(input, output, session) {
     req(ncol(dat) > 0)
     df <- as.data.frame(dat)
     prod_idx <- which(names(df) == "Product_ID")
-    
-    opts <- list(pageLength = 25, scrollX = TRUE, searching=F,lengthChange=F)
+    opts <- list(pageLength = 25, scrollX = TRUE, searching = FALSE, lengthChange = FALSE)
     if (length(prod_idx) == 1) {
-      # hide Product_ID column (DataTables uses 0-based indexes)
       opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
     }
-    
     DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
-  
   output$tbl_scen <- renderDT({
     dat <- scen_dat()
     req(ncol(dat) > 0)
     df <- as.data.frame(dat)
     prod_idx <- which(names(df) == "Product_ID")
-    
-    opts <- list(pageLength = 25, scrollX = TRUE, searching=F,lengthChange=F)
+    opts <- list(pageLength = 25, scrollX = TRUE, searching = FALSE, lengthChange = FALSE)
     if (length(prod_idx) == 1) {
-      # DataTables uses 0-based column indexes
       opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
     }
-    
     DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
-  
-  
   
   # ----- Downloads -----
   output$dl_prod <- downloadHandler(
     filename = function() paste0("product_entries_", Sys.Date(), ".csv"),
-    content = function(file) readr::write_csv(prod_dat(), file, na = "")
+    content  = function(file) readr::write_csv(prod_dat(), file, na = "")
   )
   output$dl_scen <- downloadHandler(
     filename = function() paste0("scenario_entries_", Sys.Date(), ".csv"),
-    content = function(file) readr::write_csv(scen_dat(), file, na = "")
+    content  = function(file) readr::write_csv(scen_dat(), file, na = "")
   )
   
-  # ---- Clear prod and clear scenario button
-  
-  # Server logic for resetting product inputs using lapply
+  # ---- Clear forms ----
   observeEvent(input$clear_prod, {
-    # List of text input fields for product form
-    product_text_fields <- c("EPA Registration Number","PC Code", "AI Name", "Co-Formulated AI", "% AI", "AI Concentration (Or Product Density if liquid)")
-    
-    # Resetting text inputs
+    product_text_fields <- c(
+      "EPA Registration Number","PC Code","AI Name",
+      "Co-Formulated AI","% AI",
+      "AI Concentration (Or Product Density if liquid)"
+    )
     lapply(product_text_fields, function(field) {
       id <- paste0("prod__", idsafe(field))
       updateTextInput(session, id, value = "")
     })
-    
-    # Resetting select inputs individually
-    updateSelectizeInput(session, idsafe("prod__Physical_Form"), selected = character(0))
-    updateSelectizeInput(session, idsafe("prod__RUP"), selected = character(0))
-    updateSelectizeInput(session, idsafe("prod__Product_level_PPE"), selected = character(0))
+    updateSelectizeInput(session, "prod__Physical_Form", selected = character(0))
+    updateSelectizeInput(session, "prod__Product_level_PPE", selected = character(0))
+    updateSelectizeInput(session, "prod__RUP", selected = NULL)
   })
-  
   observeEvent(input$clear_scenario, {
-    # Reset text inputs
-    scenario_text_fields <- c("EPA Registration Number", "Max # App/Year", "Max # App/Crop Cycle")
-    
+    scenario_text_fields <- c(
+      "Max # App/Year", "Max # App/Crop Cycle",
+      "Max Number of Seasons/Crop Cycles per year",
+      "RTI (d)", "REI (H)", "PHI (d)", "PGI (d)", "PSI (d)",
+      "Max Release Height", "Max Wind Speed (mph)"
+    )
     lapply(scenario_text_fields, function(field) {
       id <- paste0("scen__", idsafe(field))
       updateTextInput(session, id, value = "")
     })
-    
-    # Reset select inputs using character(0)
-    scenario_select_fields <- c("Crop Use Site", "Non Crop Use Site", "Location", "App Target", 
-                                "App Type", "App Equipment Type", "App Timing (Site)", 
-                                "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
-                                "Pollinator Protection Statement", "Soil Type Restrictions",
-                                "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area",
-                                "Max Number of Seasons/Crop Cycles per year","RTI (d)","REI (H)","PHI (d)","PGI (d)","PSI (d)","Max Release Height",
-                                "Max Wind Speed (mph)")
-    
+    scenario_select_fields <- c(
+      "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
+      "App Type", "App Equipment Type", "App Timing (Site)",
+      "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
+      "Pollinator Protection Statement", "Soil Type Restrictions",
+      "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area"
+    )
     lapply(scenario_select_fields, function(field) {
       id <- paste0("scen__", idsafe(field))
       updateSelectizeInput(session, id, selected = character(0))
     })
-    
-    # Reset numeric inputs
-    scenario_numeric_fields <- c("Min Diluent Quantity (Gal Spray Soln per Acre)", 
-                                 "Product Max App Rate/Area", "AI Max Rate/App", "Buffered Area (ft)","Product Max Rate/Year","Product Max Rate/Crop Cycle", "AI Max Rate/Year","AI Max Rate/Cycle")
-    
-    lapply(scenario_numeric_fields, function(field) {
+    lapply(c("Buffered Area (ft)"), function(field) {
       id <- paste0("scen__", idsafe(field))
       updateNumericInput(session, id, value = NA_real_)
     })
-    
-    # Reset the text area input
+    for (f in scenario_area_rate_fields) {
+      base_id     <- paste0("scen__", idsafe(f))
+      numunit_id  <- paste0(base_id, "__numunit")
+      areaunit_id <- paste0(base_id, "__areaunit")
+      updateNumericInput(session, base_id, value = NA_real_)
+      num_choices <- unit_choices_for_field(f)
+      updateSelectizeInput(session, numunit_id,  choices = num_choices,
+                           selected = scenario_area_rate_defaults[[f]]$num)
+      updateSelectizeInput(session, areaunit_id, choices = area_units,
+                           selected = scenario_area_rate_defaults[[f]]$area)
+    }
     updateTextAreaInput(session, "scen__Other_Site_Scenario_Specific_Restrictions_Limitations", value = "")
   })
-  
 }
 
-shinyApp(ui, server)  
-
-
+shinyApp(ui, server)

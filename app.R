@@ -9,6 +9,15 @@ library(stringr)
 library(tibble)
 library(shinyvalidate)
 
+## For publishing directly from GitHub to Posit
+#library(rsconnect)
+
+## For each deployment, run the line below to create manifest and make sure this file is on the GitHub repo you want to deploy from
+#rsconnect::writeManifest()
+
+
+
+
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
 
@@ -939,4 +948,6 @@ server <- function(input, output, session) {
   
 }
 
-shinyApp(ui, server)
+shinyApp(ui, server)  
+
+

@@ -12,6 +12,7 @@ library(shinyvalidate)
 ## For publishing directly from GitHub to Posit
 # library(rsconnect)
 # rsconnect::writeManifest()
+#Freeform Unit Entry added 6.3.2026
 
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"

@@ -15,7 +15,7 @@ library(shinyvalidate)
 ## For each deployment, run the line below to create manifest and make sure this file is on the GitHub repo you want to deploy from
 #rsconnect::writeManifest()
 
-
+#Change test June2026
 
 
 # ---------------- CONFIG ----------------

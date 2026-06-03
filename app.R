@@ -224,89 +224,126 @@ scenario_textarea_label <- "Other Site/Scenario Specific Restrictions & Limitati
 scenario_textarea_id    <- "scen__Other_Site_Scenario_Specific_Restrictions_Limitations"
 
 # ---------------- UI ----------------
+# Define the UI
 ui <- fluidPage(
   tags$head(
     tags$style(HTML("
-      #upperResizable {
+      #resizable {
         resize: vertical;
         overflow: auto;
         border: 1px solid #ddd;
         padding: 10px;
-        height: auto; /* Allows the div to take the size of its content */
-      .tab-content {
-        min-height: 50px; /* Ensures some min height */
+        height: auto;
+        /* height: 75vh;  Default height as 75% of the viewport height */
       }
     ")),
-    
-  tags$style(type = "text/css", "
-    .navbar-brand { color: #000000 !important; font-weight: bold !important; }
-  ")
+    tags$style(HTML("
+    /* Adjust the header font size */
+    table.dataTable thead th {
+      font-size: 11px; /* Adjust as needed */
+      color: #333; /* Optional: Change text color */
+    }
+  "))
   ),
-  div(id="upperResizable",
-  navbarPage(
-    title = "Pesticide Label Data Entry Tool",
-    id = "navbar",
-    tabPanel("Product-Level",
-             div(class = "hdr",
-                 h4("Product-Level"),
-                 br(),
-                 fluidRow(
-                   column(4,
-                          actionButton("reload", "Reload workbook"),
-                          actionButton("clear_prod", "Clear form", class = "ms-1"),
-                          actionButton("add_prod", "Add row", class = "btn-primary ms-1"),
-                          hr(),
-                          uiOutput("product_form_col1")
-                   ),
-                   column(4, uiOutput("product_form_col2")),
-                   column(4, uiOutput("product_form_col3"))
+  # Custom style for the navbar brand
+  tags$style(type = "text/css", "
+    .navbar-brand {
+      color: #000000 !important;
+      font-weight: bold !important;
+    }
+  "),
+  tags$head(
+    tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png")
+  ),
+  # NavbarPage for tab navigation
+  div(id = "resizable",
+      navbarPage(
+        title = div(
+          tags$img(src = "PLDET_icon.png", height = "30px", style = "vertical-align: middle;left-margin:1px"), # Add the icon
+          "Pesticide Label Data Entry Tool"
+        ),
+        id = "navbar",
+        
+        # Product-Level tab
+        tabPanel("Product-Level",value="product",
+                 div(class = "hdr",
+                     h4("Product-Level"),
+                     br(),
+                     fluidRow(
+                       column(4,
+                              actionButton("reload", "Reload workbook",icon=icon("redo")),
+                              actionButton("clear_prod", "Clear form",icon=icon("eraser"), class = "ms-1"),
+                              actionButton("add_prod", "Add row", class = "btn-primary ms-1",icon=icon("plus")),
+                              hr(),
+                              uiOutput("product_form_col1")
+                       ),
+                       column(4,
+                              uiOutput("product_form_col2")
+                       ),
+                       column(4,uiOutput("product_form_col3"))
+                     )
                  )
-             )
-    ),
-    tabPanel("Scenario-Level",
-             div(class = "hdr",
-                 fluidRow(
-                   column(4,
-                          h4("Scenario-Level"),
-                          uiOutput("current_product_ui"),
-                          br(),
-                          actionButton("relink_all", "Relink all scenarios", class = "btn-outline-secondary"),
-                          actionButton("clear_scen", "Clear form"),
-                          actionButton("add_scen", "Add row", class = "btn-primary"),
-                          hr(),
-                          uiOutput("scenario_form_col1")
-                   ),
-                   column(4, uiOutput("scenario_form_col2")),
-                   column(4, uiOutput("scenario_form_col3"))
+        ),
+        
+        tabPanel("Scenario-Level",value="scenario",
+                 div(class = "hdr",
+                     fluidRow(  # Fixed incorrect nesting and added fluidRow
+                       column(4,
+                              h4("Scenario-Level"),
+                              uiOutput("current_product_ui"),
+                              br(),
+                              actionButton("relink_all", "Relink all scenarios", class = "btn-outline-secondary",icon=icon("sync-alt")),
+                              actionButton("clear_scenario", "Clear form",icon=icon("eraser")),
+                              actionButton("add_scen", "Add row", class = "btn-primary",icon=icon("plus")),
+                              hr(),
+                              uiOutput("scenario_form_col1")
+                       ),
+                       column(4,
+                              
+                              uiOutput("scenario_form_col2")
+                       ),
+                       column(4,
+                              uiOutput("scenario_form_col3")
+                       )
+                     )
                  )
-             )
-    )
-  )
-),
+        )
+      )
+  ),
+  # Fluid layout for the data table tabs
   fluidRow(
-    column(12,
-           tags$hr(style = "border-top: 2px solid #333; margin-top: 20px;"),
-           tabsetPanel(
-             id = "data_tables",
-             tabPanel("Product-Level Table",
-                      div(class = "mb-2",
-                          actionButton("del_prod", "Delete selected…", class = "btn-danger me-2"),
-                          downloadButton("dl_prod", "Download product-level CSV")
-                      ),
-                      DTOutput("tbl_prod")
-             ),
-             tabPanel("Scenario-Level Table",
-                      div(class = "mb-2",
-                          actionButton("clone_to_form", "Load selected to form", class = "btn-secondary me-2"),
-                          actionButton("dup_scen", "Duplicate selected", class = "btn-outline-secondary me-2"),
-                          actionButton("del_scen", "Delete selected", class = "btn-danger me-2"),
-                          downloadButton("dl_scen", "Download scenario-level CSV")
-                      ),
-                      DTOutput("tbl_scen")
-             )
-           )
-    )
-  )
+    #div(id = "resizable",
+    column(12, 
+           tags$hr(style = "border-top: 2px solid #333; margin-top: 10px;"),
+           tabsetPanel(id = "data_tables",
+                       tabPanel("Product-Level Table",value="product",
+                                div(class = "mb-2",style="margin-top:10px",
+                                    actionButton("del_prod", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")
+                                    
+                                ),
+                                div(style="margin-top:5px",
+                                    DTOutput("tbl_prod")),
+                                downloadButton("dl_prod", "Download product-level CSV")
+                       ),
+                       
+                       tabPanel("Scenario-Level Table",value="scenario",
+                                div(class = "mb-2", style="margin-top:10px",
+                                    actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
+                                    actionButton("dup_scen", "Duplicate selected",icon = icon("copy"), class = "btn-outline-secondary me-2"),
+                                    actionButton("del_scen", "Delete selected", icon = icon("remove"),class = "btn-danger me-2")
+                                ),
+                                div(style="margin-top:5px",
+                                    DTOutput("tbl_scen")),
+                                div(style="float: left;",
+                                    downloadButton("dl_scen", "Download scenario-level CSV"))
+                                
+                                
+                                
+                       )
+           )  # Close tabsetPanel
+    )  # Close column(12
+  )  # Close fluidRow
+  #)# close div
 )
 
 # ---------------- Server ----------------
@@ -418,14 +455,6 @@ server <- function(input, output, session) {
       make_input("App Equipment Type", "pick", choices = vocab()[["App Equipment Type"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Site)", "pick", choices = vocab()[["App Timing (Site)"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Pest)", "pick", choices = vocab()[["App Timing (Pest)"]], prefix = "scen__", multiple = TRUE),
-        )
-  })
-  
-  output$scenario_form_col2 <- renderUI({
-    req(vocab())
-    tagList(
-     
-      # Split-unit helpers (column 2)
       make_area_rate_input(
         "Min Diluent Quantity (Gal Spray Soln per Acre)",
         default_num_unit  = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$num,
@@ -437,7 +466,16 @@ server <- function(input, output, session) {
         default_num_unit  = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$num,
         default_area_unit = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
-      ),
+      ),)
+  })
+  
+  output$scenario_form_col2 <- renderUI({
+    req(vocab())
+    tagList(
+      
+      # Split-unit helpers (column 2)
+      
+      
       make_area_rate_input(
         "AI Max Rate/App",
         default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/App"]]$num,
@@ -447,40 +485,41 @@ server <- function(input, output, session) {
       make_input("Max # App/Year", "text", prefix = "scen__"),
       make_input("Max # App/Crop Cycle", "text", prefix = "scen__"),
       make_area_rate_input(
-      "Product Max Rate/Year",
-      default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/Year"]]$num,
-      default_area_unit = scenario_area_rate_defaults[["Product Max Rate/Year"]]$area,
-      prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
-    ),
-    make_area_rate_input(
-      "Product Max Rate/Crop Cycle",
-      default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/Crop Cycle"]]$num,
-      default_area_unit = scenario_area_rate_defaults[["Product Max Rate/Crop Cycle"]]$area,
-      prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
-    ),
-    make_area_rate_input(
-      "AI Max Rate/Year",
-      default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Year"]]$num,
-      default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Year"]]$area,
-      prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
-    ),
-    make_area_rate_input(
-      "AI Max Rate/Cycle",
-      default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$num,
-      default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$area,
-      prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
-    ),
-    make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__"),
-  )
+        "Product Max Rate/Year",
+        default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/Year"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["Product Max Rate/Year"]]$area,
+        prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
+      ),
+      make_area_rate_input(
+        "Product Max Rate/Crop Cycle",
+        default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/Crop Cycle"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["Product Max Rate/Crop Cycle"]]$area,
+        prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
+      ),
+      make_area_rate_input(
+        "AI Max Rate/Year",
+        default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Year"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Year"]]$area,
+        prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
+      ),
+      make_area_rate_input(
+        "AI Max Rate/Cycle",
+        default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$area,
+        prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
+      ),
+      make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__"),
+      make_input("RTI (d)", "text", prefix = "scen__"),
+      make_input("REI (H)", "text", prefix = "scen__"),
+    )
   })
-    
+  
   output$scenario_form_col3 <- renderUI({
     req(vocab())
     tagList(
       # Split-unit helpers (column 3)
       # Added back FGJ 5/12
-      make_input("RTI (d)", "text", prefix = "scen__"),
-      make_input("REI (H)", "text", prefix = "scen__"),
+      
       make_input("PHI (d)", "text", prefix = "scen__"),
       make_input("PGI (d)", "text", prefix = "scen__"),
       make_input("PSI (d)", "text", prefix = "scen__"),
@@ -807,7 +846,7 @@ server <- function(input, output, session) {
     df <- as.data.frame(dat)
     prod_idx <- which(names(df) == "Product_ID")
     
-    opts <- list(pageLength = 10, scrollX = TRUE)
+    opts <- list(pageLength = 25, scrollX = TRUE, searching=F,lengthChange=F)
     if (length(prod_idx) == 1) {
       # hide Product_ID column (DataTables uses 0-based indexes)
       opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
@@ -822,7 +861,7 @@ server <- function(input, output, session) {
     df <- as.data.frame(dat)
     prod_idx <- which(names(df) == "Product_ID")
     
-    opts <- list(pageLength = 10, scrollX = TRUE)
+    opts <- list(pageLength = 25, scrollX = TRUE, searching=F,lengthChange=F)
     if (length(prod_idx) == 1) {
       # DataTables uses 0-based column indexes
       opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
@@ -842,6 +881,62 @@ server <- function(input, output, session) {
     filename = function() paste0("scenario_entries_", Sys.Date(), ".csv"),
     content = function(file) readr::write_csv(scen_dat(), file, na = "")
   )
+  
+  # ---- Clear prod and clear scenario button
+  
+  # Server logic for resetting product inputs using lapply
+  observeEvent(input$clear_prod, {
+    # List of text input fields for product form
+    product_text_fields <- c("EPA Registration Number","PC Code", "AI Name", "Co-Formulated AI", "% AI", "AI Concentration (Or Product Density if liquid)")
+    
+    # Resetting text inputs
+    lapply(product_text_fields, function(field) {
+      id <- paste0("prod__", idsafe(field))
+      updateTextInput(session, id, value = "")
+    })
+    
+    # Resetting select inputs individually
+    updateSelectizeInput(session, idsafe("prod__Physical_Form"), selected = character(0))
+    updateSelectizeInput(session, idsafe("prod__RUP"), selected = character(0))
+    updateSelectizeInput(session, idsafe("prod__Product_level_PPE"), selected = character(0))
+  })
+  
+  observeEvent(input$clear_scenario, {
+    # Reset text inputs
+    scenario_text_fields <- c("EPA Registration Number", "Max # App/Year", "Max # App/Crop Cycle")
+    
+    lapply(scenario_text_fields, function(field) {
+      id <- paste0("scen__", idsafe(field))
+      updateTextInput(session, id, value = "")
+    })
+    
+    # Reset select inputs using character(0)
+    scenario_select_fields <- c("Crop Use Site", "Non Crop Use Site", "Location", "App Target", 
+                                "App Type", "App Equipment Type", "App Timing (Site)", 
+                                "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
+                                "Pollinator Protection Statement", "Soil Type Restrictions",
+                                "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area",
+                                "Max Number of Seasons/Crop Cycles per year","RTI (d)","REI (H)","PHI (d)","PGI (d)","PSI (d)","Max Release Height",
+                                "Max Wind Speed (mph)")
+    
+    lapply(scenario_select_fields, function(field) {
+      id <- paste0("scen__", idsafe(field))
+      updateSelectizeInput(session, id, selected = character(0))
+    })
+    
+    # Reset numeric inputs
+    scenario_numeric_fields <- c("Min Diluent Quantity (Gal Spray Soln per Acre)", 
+                                 "Product Max App Rate/Area", "AI Max Rate/App", "Buffered Area (ft)","Product Max Rate/Year","Product Max Rate/Crop Cycle", "AI Max Rate/Year","AI Max Rate/Cycle")
+    
+    lapply(scenario_numeric_fields, function(field) {
+      id <- paste0("scen__", idsafe(field))
+      updateNumericInput(session, id, value = NA_real_)
+    })
+    
+    # Reset the text area input
+    updateTextAreaInput(session, "scen__Other_Site_Scenario_Specific_Restrictions_Limitations", value = "")
+  })
+  
 }
 
 shinyApp(ui, server)

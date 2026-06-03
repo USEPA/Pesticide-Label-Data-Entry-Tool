@@ -269,7 +269,7 @@ ui <- fluidPage(
       navbarPage(
         title = div(
           tags$img(src = "PLDET_icon.png", height = "30px", style = "vertical-align: middle;left-margin:1px"), # Add the icon
-          "Pesticide Label Data Entry Toolz"
+          "Pesticide Label Data Entry Tool"
         ),
         id = "navbar",
         

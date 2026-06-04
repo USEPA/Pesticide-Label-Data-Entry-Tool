@@ -142,6 +142,7 @@ make_area_rate_input <- function(field_label,
   num_choices   <- c(if (allow_weight) weight_units else character(0),
                      if (allow_volume) volume_units else character(0))
   num_choices   <- unique(num_choices)
+  
   if (!default_num_unit %in% num_choices) {
     default_num_unit <- if (allow_weight) "lb" else if (allow_volume) "gal" else num_choices[1]
   }
@@ -149,21 +150,30 @@ make_area_rate_input <- function(field_label,
   
   tagList(
     tags$label(class = "form-label", `for` = input_id, field_label),
-    div(class = "input-group mb-3",
-        div(class = "flex-grow-1",
+    div(class = "ust-rate-row mb-3",
+        div(class = "ust-numeric",
             numericInput(input_id, label = NULL, value = NA_real_, width = "100%")),
-        div(class = "input-group-text p-0 border-0",
-            style = "display:flex; align-items:center; gap:6px; padding-right:0.5rem;",
-            selectizeInput(
-              numunit_id, label = NULL, choices = num_choices,
-              selected = default_num_unit, width = "120px",
-              options = list(create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE)
+        div(class = "ust-units",
+            div(class = "ust-unit",
+                selectizeInput(
+                  numunit_id, label = NULL, choices = num_choices,
+                  selected = default_num_unit, width = NULL,
+                  options = list(
+                    create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE,
+                    dropdownParent = "body"
+                  )
+                )
             ),
-            span("/"),
-            selectizeInput(
-              areaunit_id, label = NULL, choices = area_units,
-              selected = default_area_unit, width = "90px",
-              options = list(create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE)
+            span(class = "sep", "/"),
+            div(class = "ust-unit",
+                selectizeInput(
+                  areaunit_id, label = NULL, choices = area_units,
+                  selected = default_area_unit, width = NULL,
+                  options = list(
+                    create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE,
+                    dropdownParent = "body"
+                  )
+                )
             )
         )
     )
@@ -264,8 +274,65 @@ ui <- fluidPage(
         font-size: 11px;
         color: #333;
       }
-    "))
+    ")),
+    tags$style(HTML("
+    /* Row layout for numeric + units */
+    .ust-rate-row { display:flex; align-items:center; gap:6px; flex-wrap: nowrap; }
+    .ust-rate-row .ust-numeric { flex: 1 1 auto; min-width: 0; }
+    .ust-rate-row .ust-units { display:flex; align-items:center; gap:6px; flex: 0 0 auto; }
+
+    /* Shiny forces input containers to 100% width; override for our unit inputs */
+    .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
+
+    .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
+    /* First unit (numerator) */
+    .ust-units .ust-unit:first-of-type .selectize-control { width: auto !important; min-width: 60px; }
+    /* Second unit (area) */
+    .ust-units .ust-unit:last-of-type .selectize-control  { width: auto !important; min-width: 60px; }
+    .ust-units .selectize-control .selectize-input { width: auto; white-space: nowrap; }
+
+    .ust-units .sep { padding: 0 2px; color: #555; }
+
+    .selectize-control.single .selectize-input,
+    .selectize-control.single .selectize-input.input-active {
+      min-height: calc(2.25rem + 2px);
+      padding: .375rem .75rem;
+      line-height: 1.5;
+      box-sizing: border-box;
+    }
+    .selectize-control.single .selectize-input > input {
+      height: 1.5rem;
+    }
+  "))
   ),
+  tags$head(
+    tags$style(HTML("
+    /* Let the caret render outside the input box */
+    .ust-units .selectize-control.single .selectize-input {
+      overflow: visible;           /* default is hidden; allow caret to overflow */
+      padding-right: .75rem;       /* remove the extra right padding selectize reserves */
+      position: relative;
+    }
+  
+    .ust-units .selectize-control.single .selectize-input:after {
+      right: -12px !important;     /* negative pushes it outside */
+      border-top-color: #6c757d;   /* subtle color */
+      opacity: 0.9;
+    }
+
+   
+    .ust-units .selectize-control.single .selectize-input.dropdown-active:after {
+      border-width: 0 6px 6px 6px;
+      border-color: transparent transparent #6c757d transparent;
+      margin-top: -1px;
+    }
+
+    /* Ensure unit inputs don't stretch full width */
+    .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
+    .ust-units .selectize-control       { width: auto !important; min-width: 120px; }
+  "))
+  ),
+  
   tags$style(type = "text/css", "
     .navbar-brand { color: #000000 !important; font-weight: bold !important; }
   "),
@@ -347,6 +414,7 @@ ui <- fluidPage(
     )
   )
 )
+
 
 # ---------------- Server ----------------
 server <- function(input, output, session) {

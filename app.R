@@ -9,11 +9,6 @@ library(stringr)
 library(tibble)
 library(shinyvalidate)
 
-## For publishing directly from GitHub to Posit
-# library(rsconnect)
-# rsconnect::writeManifest()
-#Freeform Unit Entry added 6.3.2026
-
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
 
@@ -398,8 +393,13 @@ ui <- fluidPage(
           "Product-Level Table", value = "product",
           div(class = "mb-2", style = "margin-top:10px",
               actionButton("del_prod", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")),
-          div(style = "margin-top:5px", DTOutput("tbl_prod")),
-          downloadButton("dl_prod", "Download product-level CSV")
+          div(
+            style = "margin-top:5px",
+            DTOutput("tbl_prod"),
+            div(style = "float:left;",
+                downloadButton("dl_prod", "Download product-level CSV"),
+                actionButton("upload_prod", "Upload CSV", icon=icon("upload"),class = "btn-secondary ms-2"))
+          )
         ),
         tabPanel(
           "Scenario-Level Table", value = "scenario",
@@ -407,14 +407,18 @@ ui <- fluidPage(
               actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
               actionButton("dup_scen", "Duplicate selected", icon = icon("copy"), class = "btn-outline-secondary me-2"),
               actionButton("del_scen", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")),
-          div(style = "margin-top:5px", DTOutput("tbl_scen")),
-          div(style = "float: left;", downloadButton("dl_scen", "Download scenario-level CSV"))
+          div(
+            style = "margin-top:5px",
+            DTOutput("tbl_scen"),
+            div(style = "float:left;",
+                downloadButton("dl_scen", "Download scenario-level CSV"),
+                actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2"))
+          )
         )
       )
     )
   )
 )
-
 
 # ---------------- Server ----------------
 server <- function(input, output, session) {
@@ -432,6 +436,118 @@ server <- function(input, output, session) {
   
   prod_dat <- reactiveVal(make_empty_prod())
   scen_dat <- reactiveVal(make_empty_scen())
+  
+  ## Function to show modal for file upload
+  show_upload_modal <- function(table_type) {
+    modalDialog(
+      fileInput(paste0("file_upload_", table_type), "Choose CSV File", accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton(paste0("confirm_upload_", table_type), "Upload", class = "btn-primary")
+      ),
+      easyClose = FALSE,
+      size = "m",
+      title = paste("Upload to", table_type, "Table")
+    )
+  }
+  
+  ## Observer to show upload modal for product
+  observeEvent(input$upload_prod, {
+    showModal(show_upload_modal("product"))
+    observeEvent(input$confirm_upload_product, {
+      removeModal()
+      if (is.null(input$file_upload_product)) {
+        showNotification("No file selected.", type = "error")
+        return()
+      }
+      data <- tryCatch({
+        read.csv(input$file_upload_product$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+      }, error = function(e) {
+        showNotification("Failed to read file.", type = "error")
+        return(NULL)
+      })
+      
+      if (!is.null(data)) {
+        required_fields <- map_chr(c("Product_ID", product_fields), idsafe)
+        uploaded_fields <- map_chr(names(data), idsafe)
+        
+        if (!all(required_fields %in% uploaded_fields)) {
+          showNotification("File format does not match product-level fields. It should contain all the required columns.", type = "error")
+          return()
+        }
+        
+        showModal(modalDialog(
+          title = "File Uploaded Successfully",
+          selectInput("upload_mode_prod", "Choose an option:", choices = c("Append", "Replace")),
+          footer = tagList(
+            modalButton("Cancel"),
+            actionButton("commit_upload_prod", "Commit Changes", class = "btn-success")
+          ),
+          easyClose = FALSE
+        ))
+        
+        observeEvent(input$commit_upload_prod, {
+          if (input$upload_mode_prod == "Append") {
+            merged_data <- distinct(dplyr::bind_rows(prod_dat(), data))
+            prod_dat(merged_data)  # Assign new data directly
+          } else {
+            prod_dat(data)
+          }
+          removeModal()
+          showNotification("Data uploaded successfully.", type = "message")
+        })
+      }
+    })
+  })
+  
+  ## Observer to show upload modal for scenario
+  observeEvent(input$upload_scen, {
+    showModal(show_upload_modal("scenario"))
+    observeEvent(input$confirm_upload_scenario, {
+      removeModal()
+      if (is.null(input$file_upload_scenario)) {
+        showNotification("No file selected.", type = "error")
+        return()
+      }
+      data <- tryCatch({
+        read.csv(input$file_upload_scenario$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+      }, error = function(e) {
+        showNotification("Failed to read file.", type = "error")
+        return(NULL)
+      })
+      
+      if (!is.null(data)) {
+        expected_fields <- map_chr(c("Product_ID", product_fields, scenario_fields, scenario_textarea_label), idsafe)
+        uploaded_fields <- map_chr(names(data), idsafe)
+        
+        if (!all(expected_fields %in% uploaded_fields)) {
+          showNotification("File format does not match scenario-level fields. It should contain all the required columns.", type = "error")
+          return()
+        }
+        
+        showModal(modalDialog(
+          title = "File Uploaded Successfully",
+          selectInput("upload_mode_scen", "Choose an option:", choices = c("Append", "Replace")),
+          footer = tagList(
+            modalButton("Cancel"),
+            actionButton("commit_upload_scen", "Commit Changes", class = "btn-success")
+          ),
+          easyClose = FALSE
+        ))
+        
+        observeEvent(input$commit_upload_scen, {
+          if (input$upload_mode_scen == "Append") {
+            merged_data <- distinct(dplyr::bind_rows(scen_dat(), data))
+            scen_dat(merged_data)  # Assign new data directly
+          } else {
+            scen_dat(data)
+          }
+          removeModal()
+          showNotification("Data uploaded successfully.", type = "message")
+        })
+      }
+    })
+  })
   
   # Load vocab
   observe({
@@ -660,6 +776,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "current_product",
                       choices = product_choices(),
                       selected = sprintf("P%03d", next_id_num))
+    updateTabsetPanel(session, "data_tables", selected = "product")
     showNotification("Product-level row added.", type = "message")
   })
   
@@ -700,6 +817,7 @@ server <- function(input, output, session) {
       new_row <- dplyr::bind_cols(prod_row[1, , drop = FALSE], scen_row)
       sd_new <- dplyr::bind_rows(scen_dat(), new_row)
       scen_dat(sd_new)
+      updateTabsetPanel(session, "data_tables", selected = "scenario")
       showNotification(sprintf("Scenario-level row added. Total scenarios: %d", nrow(sd_new)), type = "message")
     }, error = function(e) {
       showNotification(paste("Failed to add scenario:", conditionMessage(e)), type = "error", duration = 8)

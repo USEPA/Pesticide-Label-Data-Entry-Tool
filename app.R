@@ -987,15 +987,37 @@ server <- function(input, output, session) {
     }
     DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
-  output$tbl_scen <- renderDT({
+  hidden_product_cols_in_scen <- c(
+    "AI Name",
+    "PC Code",
+    "Co-Formulated AI",
+    "Physical Form",
+    "% AI",
+    "AI Concentration (Or Product Density if liquid)",
+    "RUP",
+    "Product-level PPE"
+  )
+  output$tbl_scen <- DT::renderDT({
     dat <- scen_dat()
     req(ncol(dat) > 0)
     df <- as.data.frame(dat)
-    prod_idx <- which(names(df) == "Product_ID")
-    opts <- list(pageLength = 25, scrollX = TRUE, searching = FALSE, lengthChange = FALSE)
-    if (length(prod_idx) == 1) {
-      opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
-    }
+    
+    # Columns to hide in the display (keep in data and downloads)
+    cols_to_hide <- c("Product_ID", hidden_product_cols_in_scen)
+    
+    # DataTables uses 0-based column indexes
+    targets <- which(names(df) %in% cols_to_hide) - 1
+    
+    opts <- list(
+      pageLength = 25,
+      scrollX = TRUE,
+      searching = FALSE,
+      lengthChange = FALSE,
+      columnDefs = list(
+        list(visible = FALSE, targets = targets)
+      )
+    )
+    
     DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
   

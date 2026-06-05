@@ -275,7 +275,7 @@ ui <- fluidPage(
     .ust-rate-row .ust-numeric { flex: 1 1 auto; min-width: 0; }
     .ust-rate-row .ust-units { display:flex; align-items:center; gap:6px; flex: 0 0 auto; }
     .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
-    .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
+    .ust-units .ust-numeric .form-control { min-width: 6em; }
     .ust-units .ust-unit:first-of-type .selectize-control { width: auto !important; min-width: 60px; }
     .ust-units .ust-unit:last-of-type .selectize-control  { width: auto !important; min-width: 60px; }
     .ust-units .selectize-control .selectize-input { width: auto; white-space: nowrap; }
@@ -358,23 +358,19 @@ ui <- fluidPage(
     column(
       12,
       tags$hr(style = "border-top: 2px solid #333; margin-top: 10px;"),
-      div(class = "mb-2",
-          actionButton("upload_any", "Smart Upload CSV", icon = icon("upload"), class = "btn-success"),
-          tags$span(class = "ms-2 text-muted",
-                    "Upload a CSV with product and/or scenario columns; auto-detect and link.")
-      ),
       tabsetPanel(
         id = "data_tables",
         tabPanel(
           "Product-Level Table", value = "product",
           div(class = "mb-2", style = "margin-top:10px",
+              actionButton("clone_prod_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
               actionButton("del_prod", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")),
           div(
             style = "margin-top:5px",
             DTOutput("tbl_prod"),
             div(style = "float:left;",
                 downloadButton("dl_prod", "Download product-level CSV"),
-                actionButton("upload_prod", "Upload CSV", icon=icon("upload"),class = "btn-secondary ms-2"))
+                actionButton("upload_any_prod", "Smart Upload CSV", icon = icon("upload"), class = "btn-success ms-2"))
           )
         ),
         tabPanel(
@@ -388,7 +384,7 @@ ui <- fluidPage(
             DTOutput("tbl_scen"),
             div(style = "float:left;",
                 downloadButton("dl_scen", "Download scenario-level CSV"),
-                actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2"))
+                actionButton("upload_any_scen", "Smart Upload CSV", icon = icon("upload"), class = "btn-success ms-2"))
           )
         )
       )
@@ -442,103 +438,7 @@ server <- function(input, output, session) {
     )
   }
   
-  ## Observer to show upload modal for product
-  observeEvent(input$upload_prod, {
-    showModal(show_upload_modal("product"))
-    observeEvent(input$confirm_upload_product, {
-      removeModal()
-      if (is.null(input$file_upload_product)) {
-        showNotification("No file selected.", type = "error")
-        return()
-      }
-      data <- tryCatch({
-        read.csv(input$file_upload_product$datapath, stringsAsFactors = FALSE, check.names = FALSE)
-      }, error = function(e) {
-        showNotification("Failed to read file.", type = "error")
-        return(NULL)
-      })
-      if (is.null(data)) return()
-      data <- as_char_df(data)
-      
-      required_fields <- map_chr(c("Product_ID", product_fields), idsafe)
-      uploaded_fields <- map_chr(names(data), idsafe)
-      if (!all(required_fields %in% uploaded_fields)) {
-        showNotification("File format does not match product-level fields. It should contain all the required columns.", type = "error")
-        return()
-      }
-      
-      showModal(modalDialog(
-        title = "File Uploaded Successfully",
-        selectInput("upload_mode_prod", "Choose an option:", choices = c("Append", "Replace")),
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton("commit_upload_prod", "Commit Changes", class = "btn-success")
-        ),
-        easyClose = FALSE
-      ))
-      
-      observeEvent(input$commit_upload_prod, {
-        if (input$upload_mode_prod == "Append") {
-          merged_data <- distinct(dplyr::bind_rows(prod_dat(), data))
-          prod_dat(merged_data)
-        } else {
-          prod_dat(data)
-        }
-        removeModal()
-        showNotification("Data uploaded successfully.", type = "message")
-      }, ignoreInit = TRUE, once = TRUE)
-    })
-  })
-  
-  ## Observer to show upload modal for scenario
-  observeEvent(input$upload_scen, {
-    showModal(show_upload_modal("scenario"))
-    observeEvent(input$confirm_upload_scenario, {
-      removeModal()
-      if (is.null(input$file_upload_scenario)) {
-        showNotification("No file selected.", type = "error")
-        return()
-      }
-      data <- tryCatch({
-        read.csv(input$file_upload_scenario$datapath, stringsAsFactors = FALSE, check.names = FALSE)
-      }, error = function(e) {
-        showNotification("Failed to read file.", type = "error")
-        return(NULL)
-      })
-      if (is.null(data)) return()
-      data <- as_char_df(data)
-      
-      expected_fields <- map_chr(c("Product_ID", product_fields, scenario_fields, scenario_textarea_label), idsafe)
-      uploaded_fields <- map_chr(names(data), idsafe)
-      if (!all(expected_fields %in% uploaded_fields)) {
-        showNotification("File format does not match scenario-level fields. It should contain all the required columns.", type = "error")
-        return()
-      }
-      
-      showModal(modalDialog(
-        title = "File Uploaded Successfully",
-        selectInput("upload_mode_scen", "Choose an option:", choices = c("Append", "Replace")),
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton("commit_upload_scen", "Commit Changes", class = "btn-success")
-        ),
-        easyClose = FALSE
-      ))
-      
-      observeEvent(input$commit_upload_scen, {
-        if (input$upload_mode_scen == "Append") {
-          merged_data <- distinct(dplyr::bind_rows(scen_dat(), data))
-          scen_dat(merged_data)
-        } else {
-          scen_dat(data)
-        }
-        removeModal()
-        showNotification("Data uploaded successfully.", type = "message")
-      }, ignoreInit = TRUE, once = TRUE)
-    })
-  })
-  
-  # ---- Smart-upload helpers (safer across dplyr versions) ----
+  # ---- Smart-upload helpers ----
   standardize_colnames <- function(df) {
     canon <- c("Product_ID", product_fields, scenario_fields, scenario_textarea_label)
     canon_map <- setNames(canon, idsafe(canon))
@@ -647,199 +547,6 @@ server <- function(input, output, session) {
     as_char_df(out)
   }
   
-  # ---- Smart Upload: auto-detect product/scenario and link ----
-  observeEvent(input$upload_any, {
-    showModal(show_upload_modal("auto"))
-    observeEvent(input$confirm_upload_auto, {
-      removeModal()
-      if (is.null(input$file_upload_auto)) {
-        showNotification("No file selected.", type = "error")
-        return()
-      }
-      df <- tryCatch({
-        read.csv(input$file_upload_auto$datapath, stringsAsFactors = FALSE, check.names = FALSE)
-      }, error = function(e) {
-        showNotification("Failed to read file.", type = "error")
-        return(NULL)
-      })
-      if (is.null(df) || !nrow(df)) {
-        showNotification("Empty or unreadable CSV.", type = "error")
-        return()
-      }
-      
-      df <- standardize_colnames(df)
-      df <- as_char_df(df)
-      kind <- detect_upload_kind(df)
-      
-      pending_prod <- NULL
-      pending_scen <- NULL
-      summary_lines <- c()
-      
-      if (kind %in% c("product_only", "product_only_no_id")) {
-        prod_cols <- c("Product_ID", product_fields)
-        df_prod <- df[, intersect(names(df), prod_cols), drop = FALSE]
-        if (!"Product_ID" %in% names(df_prod)) df_prod$Product_ID <- NA_character_
-        need_id <- which(is.na(df_prod$Product_ID) | !nzchar(df_prod$Product_ID))
-        if (length(need_id)) {
-          uni <- df_prod[need_id, product_fields, drop = FALSE] %>% distinct()
-          new_ids <- next_product_ids(nrow(uni))
-          uni$key <- build_product_key(uni)
-          df_prod$key <- build_product_key(df_prod[, product_fields, drop = FALSE])
-          id_map <- tibble(key = uni$key, Product_ID = new_ids)
-          df_prod <- df_prod %>%
-            left_join(id_map, by = "key", suffix = c("", ".new")) %>%
-            mutate(Product_ID = ifelse(is.na(.data$Product_ID) | !nzchar(.data$Product_ID),
-                                       .data$Product_ID.new, .data$Product_ID)) %>%
-            select(-one_of(c("key", "Product_ID.new")))
-        }
-        df_prod <- df_prod %>%
-          distinct(Product_ID, .keep_all = TRUE) %>%
-          ensure_cols_order(c("Product_ID", product_fields))
-        df_prod <- as_char_df(df_prod)
-        
-        pending_prod <- df_prod
-        summary_lines <- c(summary_lines, sprintf("Detected product-only upload: %d product row(s).", nrow(df_prod)))
-        
-      } else if (kind %in% c("scenario_full", "scenario_partial_with_id", "scenario_partial_no_id")) {
-        scen_cols_all <- c("Product_ID", product_fields, scenario_fields, scenario_textarea_label)
-        df_scen <- df[, intersect(names(df), scen_cols_all), drop = FALSE]
-        
-        if (!"Product_ID" %in% names(df_scen)) {
-          # No Product_ID in upload: match/create by key
-          m <- match_or_create_products(df_scen)
-          if (nrow(m$to_add)) {
-            pending_prod <- bind_rows(pending_prod %||% make_empty_prod(), m$to_add)
-            summary_lines <- c(summary_lines, sprintf("Created %d new product(s) from scenario upload.", nrow(m$to_add)))
-          }
-          keys <- build_product_key(df_scen[, product_fields, drop = FALSE])
-          df_scen$Product_ID <- unname(m$map[keys])
-        } else {
-          # Product_ID present: respect it and ensure a matching product row exists
-          prod_from_upload <- df_scen[, intersect(names(df_scen), c("Product_ID", product_fields)), drop = FALSE] %>%
-            dplyr::distinct(Product_ID, .keep_all = TRUE)
-          
-          existing_pids <- prod_dat()$Product_ID %||% character(0)
-          prod_to_add <- prod_from_upload %>%
-            dplyr::filter(!.data$Product_ID %in% existing_pids) %>%
-            ensure_cols_order(c("Product_ID", product_fields))
-          
-          if (nrow(prod_to_add)) {
-            prod_to_add <- as_char_df(prod_to_add)
-            pending_prod <- dplyr::bind_rows(pending_prod %||% make_empty_prod(), prod_to_add) %>%
-              dplyr::distinct(Product_ID, .keep_all = TRUE)
-            summary_lines <- c(summary_lines, sprintf("Detected %d new product(s) by Product_ID; will add.", nrow(prod_to_add)))
-          }
-        }
-        
-        # Remove scenarios that still lack a Product_ID after linking
-        missing_pid <- which(is.na(df_scen$Product_ID) | !nzchar(df_scen$Product_ID))
-        if (length(missing_pid)) {
-          showNotification(sprintf("Skipping %d scenario row(s) that could not be linked to a product.", length(missing_pid)),
-                           type = "warning", duration = 8)
-          df_scen <- df_scen[-missing_pid, , drop = FALSE]
-        }
-        if (!nrow(df_scen)) {
-          showNotification("No scenario rows remain after linking.", type = "error")
-          return()
-        }
-        
-        # Stage pending products (if any) so we can fill canonical product columns for preview
-        staged_prod <- prod_dat()
-        if (!is.null(pending_prod) && nrow(pending_prod)) {
-          staged_prod <- staged_prod %>%
-            bind_rows(pending_prod) %>%
-            distinct(Product_ID, .keep_all = TRUE)
-        }
-        old_prod_dat <- prod_dat()
-        prod_dat(staged_prod)  # temporarily stage for fill
-        df_scen <- fill_product_columns_from_master(df_scen)
-        prod_dat(old_prod_dat) # revert
-        df_scen <- ensure_cols_order(df_scen, scen_cols_all)
-        df_scen <- as_char_df(df_scen)
-        
-        pending_scen <- df_scen
-        summary_lines <- c(summary_lines, sprintf("Detected scenario upload: %d scenario row(s).", nrow(df_scen)))
-        
-      } else {
-        showNotification("Could not recognize CSV as product or scenario data. Check column names.", type = "error", duration = 8)
-        return()
-      }
-      
-      choices <- c()
-      if (!is.null(pending_prod) && nrow(pending_prod)) choices <- c(choices, "Append products", "Replace products")
-      if (!is.null(pending_scen) && nrow(pending_scen)) choices <- c(choices, "Append scenarios", "Replace scenarios")
-      if (!length(choices)) {
-        showNotification("Nothing to import.", type = "warning")
-        return()
-      }
-      
-      showModal(modalDialog(
-        title = "Smart upload: review and commit",
-        size = "m",
-        tagList(
-          tags$ul(lapply(summary_lines, tags$li)),
-          checkboxGroupInput("smart_upload_actions", "Choose commit actions:",
-                             choices = choices,
-                             selected = if (any(grepl("^Append", choices))) choices[grepl("^Append", choices)] else choices),
-          tags$small(class = "text-muted", "Tip: Append adds to existing rows; Replace overwrites the entire table.")
-        ),
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton("commit_upload_any", "Commit", class = "btn-success")
-        ),
-        easyClose = FALSE
-      ))
-      
-      observeEvent(input$commit_upload_any, {
-        removeModal()
-        
-        if (!is.null(pending_prod) && nrow(pending_prod)) {
-          pending_prod <- as_char_df(pending_prod)
-          if ("Replace products" %in% input$smart_upload_actions) {
-            prod_dat(pending_prod %>% distinct(Product_ID, .keep_all = TRUE))
-          } else if ("Append products" %in% input$smart_upload_actions) {
-            prod_dat(bind_rows(prod_dat(), pending_prod) %>% distinct(Product_ID, .keep_all = TRUE))
-          }
-        }
-        
-        if (!is.null(pending_scen) && nrow(pending_scen)) {
-          df_scen_final <- fill_product_columns_from_master(pending_scen)
-          df_scen_final <- as_char_df(df_scen_final)
-          if ("Replace scenarios" %in% input$smart_upload_actions) {
-            scen_dat(df_scen_final)
-          } else if ("Append scenarios" %in% input$smart_upload_actions) {
-            scen_dat(bind_rows(scen_dat(), df_scen_final) %>% distinct())
-          }
-        }
-        
-        showNotification("Smart upload completed.", type = "message")
-      }, ignoreInit = TRUE, once = TRUE)
-    })
-  })
-  
-  # Load vocab
-  observe({
-    validate(need(file.exists(workbook_path),
-                  paste("Workbook not found. Check path:\n", workbook_path)))
-    vocab(build_vocab(workbook_path))
-  })
-  observeEvent(input$reload, {
-    vocab(build_vocab(workbook_path))
-    showNotification("Workbook reloaded.", type = "message")
-  })
-  
-  # Diagnostics for empty picklists
-  observeEvent(vocab(), {
-    cu <- length(vocab()[["Crop Use Site"]] %||% character(0))
-    ncu <- length(vocab()[["Non Crop Use Site"]] %||% character(0))
-    if (cu == 0 || ncu == 0) {
-      showNotification(
-        sprintf("Picklist empty? Crop Use Site = %d items, Non Crop Use Site = %d items. Check sheet/column names.", cu, ncu),
-        type = "warning", duration = 7
-      )
-    }
-  }, once = TRUE)
-  
   # ----- Product form (3 columns) -----
   output$product_form_col1 <- renderUI({
     req(vocab())
@@ -884,6 +591,31 @@ server <- function(input, output, session) {
     default_sel <- if (length(ch)) unname(tail(ch, 1)) else NULL
     selectInput("current_product", "Linked product", choices = ch, selected = default_sel, width = "260px")
   })
+  
+  # Keep Linked product dropdown in sync and auto-deduplicate Product_IDs
+  observeEvent(prod_dat(), {
+    pd <- prod_dat()
+    if (nrow(pd)) {
+      # Deduplicate by Product_ID, keeping first occurrence
+      pd2 <- pd %>% dplyr::group_by(Product_ID) %>% dplyr::slice(1) %>% dplyr::ungroup()
+      if (nrow(pd2) < nrow(pd)) {
+        prod_dat(pd2)
+        showNotification(sprintf("Removed %d duplicate product row(s) by Product_ID.", nrow(pd) - nrow(pd2)), type = "warning")
+        return() # prod_dat() changed again; next invocation will refresh dropdown
+      }
+    }
+    # Refresh dropdown
+    ch <- product_choices()
+    sel <- input$current_product
+    if (length(ch) == 0) {
+      updateSelectInput(session, "current_product", choices = setNames(character(0), character(0)), selected = NULL)
+    } else {
+      if (is.null(sel) || !(sel %in% unname(ch))) {
+        sel <- unname(tail(ch, 1))
+      }
+      updateSelectInput(session, "current_product", choices = ch, selected = sel)
+    }
+  }, ignoreInit = FALSE, priority = 10)
   
   # ----- Scenario form (3 columns) -----
   output$scenario_form_col1 <- renderUI({
@@ -1038,14 +770,64 @@ server <- function(input, output, session) {
   # ----- Product actions -----
   observeEvent(input$add_prod, {
     new_row <- collect_row(input, product_fields, prefix = "prod__")
-    next_id_num <- nrow(prod_dat()) + 1
-    new_row <- tibble::add_column(new_row, Product_ID = sprintf("P%03d", next_id_num), .before = 1)
-    prod_dat(dplyr::bind_rows(prod_dat(), new_row))
-    updateSelectInput(session, "current_product",
-                      choices = product_choices(),
-                      selected = sprintf("P%03d", next_id_num))
+    new_id <- next_product_ids(1) # safe, monotonic ID
+    new_row <- tibble::add_column(new_row, Product_ID = new_id, .before = 1)
+    pd <- dplyr::bind_rows(prod_dat(), new_row) %>% dplyr::distinct(Product_ID, .keep_all = TRUE)
+    prod_dat(pd)
+    updateSelectInput(session, "current_product", choices = product_choices(), selected = new_id)
     updateTabsetPanel(session, "data_tables", selected = "product")
-    showNotification("Product-level row added.", type = "message")
+    showNotification(sprintf("Product-level row added as %s.", new_id), type = "message")
+  })
+  
+  # Load selected product to form
+  observeEvent(input$clone_prod_to_form, {
+    sel <- input$tbl_prod_rows_selected
+    if (length(sel) != 1) {
+      showNotification("Select exactly one product row to load into the form.", type = "warning")
+      return()
+    }
+    pd <- prod_dat()
+    row <- pd[sel, , drop = FALSE]
+    # Update text fields
+    product_text_fields <- c(
+      "EPA Registration Number","AI Name","PC Code",
+      "Co-Formulated AI","% AI",
+      "AI Concentration (Or Product Density if liquid)"
+    )
+    lapply(product_text_fields, function(field) {
+      id <- paste0("prod__", idsafe(field))
+      try(updateTextInput(session, id, value = row[[field]][1] %||% ""), silent = TRUE)
+    })
+    # Physical Form (multiple)
+    {
+      id <- "prod__Physical_Form"
+      vals <- split_multi(row[["Physical Form"]][1] %||% "")
+      ch <- vocab()[["Physical Form"]] %||% character(0)
+      missing <- setdiff(vals, ch); ch <- c(ch, missing)
+      try(updateSelectizeInput(session, id, choices = ch, selected = vals), silent = TRUE)
+    }
+    # RUP (single)
+    {
+      id <- "prod__RUP"
+      val <- row[["RUP"]][1] %||% ""
+      ch <- vocab()[["RUP"]] %||% character(0)
+      if (!nzchar(val)) {
+        try(updateSelectizeInput(session, id, choices = ch, selected = NULL), silent = TRUE)
+      } else {
+        if (!(val %in% ch)) ch <- c(ch, val)
+        try(updateSelectizeInput(session, id, choices = ch, selected = val), silent = TRUE)
+      }
+    }
+    # Product-level PPE (multiple)
+    {
+      id <- "prod__Product_level_PPE"
+      vals <- split_multi(row[["Product-level PPE"]][1] %||% "")
+      ch <- vocab()[["Product-level PPE"]] %||% character(0)
+      missing <- setdiff(vals, ch); ch <- c(ch, missing)
+      try(updateSelectizeInput(session, id, choices = ch, selected = vals), silent = TRUE)
+    }
+    try(updateSelectInput(session, "current_product", choices = product_choices(), selected = row$Product_ID[1]), silent = TRUE)
+    showNotification("Product loaded into form. Edit fields and click 'Add row' to save as a new product.", type = "message")
   })
   
   # ----- Scenario actions -----
@@ -1078,9 +860,13 @@ server <- function(input, output, session) {
       prod_row <- pd %>%
         dplyr::filter(Product_ID == cur_prod) %>%
         dplyr::select(Product_ID, dplyr::all_of(product_fields))
-      if (nrow(prod_row) != 1) {
-        showNotification(sprintf("Expected 1 product row for '%s', found %d.", cur_prod, nrow(prod_row)), type = "error")
+      if (nrow(prod_row) < 1) {
+        showNotification(sprintf("No product row found for '%s'.", cur_prod), type = "error")
         return()
+      }
+      if (nrow(prod_row) > 1) {
+        prod_row <- prod_row[1, , drop = FALSE]
+        showNotification(sprintf("Multiple product rows found for '%s'; using the first.", cur_prod), type = "warning")
       }
       new_row <- dplyr::bind_cols(prod_row[1, , drop = FALSE], scen_row)
       sd_new <- dplyr::bind_rows(scen_dat(), new_row)
@@ -1149,8 +935,7 @@ server <- function(input, output, session) {
       id <- paste0("scen__", idsafe(nm))
       vals <- split_multi(row[[nm]][1] %||% "")
       ch <- vocab()[[nm]] %||% character(0)
-      missing <- setdiff(vals, ch)
-      ch <- c(ch, missing)
+      missing <- setdiff(vals, ch); ch <- c(ch, missing)
       try(updateSelectizeInput(session, id, choices = ch, selected = vals), silent = TRUE)
     }
     for (nm in scenario_numeric_fields) {
@@ -1345,6 +1130,208 @@ server <- function(input, output, session) {
     }
     updateTextAreaInput(session, "scen__Other_Site_Scenario_Specific_Restrictions_Limitations", value = "")
   })
+  
+  # ================= Smart Upload (replaces old per-table Upload CSV buttons) =================
+  start_smart_upload <- function() {
+    showModal(show_upload_modal("auto"))
+    observeEvent(input$confirm_upload_auto, {
+      removeModal()
+      if (is.null(input$file_upload_auto)) {
+        showNotification("No file selected.", type = "error")
+        return()
+      }
+      df <- tryCatch({
+        read.csv(input$file_upload_auto$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+      }, error = function(e) {
+        showNotification("Failed to read file.", type = "error")
+        return(NULL)
+      })
+      if (is.null(df) || !nrow(df)) {
+        showNotification("Empty or unreadable CSV.", type = "error")
+        return()
+      }
+      
+      df <- standardize_colnames(df)
+      df <- as_char_df(df)
+      kind <- detect_upload_kind(df)
+      
+      pending_prod <- NULL
+      pending_scen <- NULL
+      summary_lines <- c()
+      
+      if (kind %in% c("product_only", "product_only_no_id")) {
+        prod_cols <- c("Product_ID", product_fields)
+        df_prod <- df[, intersect(names(df), prod_cols), drop = FALSE]
+        if (!"Product_ID" %in% names(df_prod)) df_prod$Product_ID <- NA_character_
+        need_id <- which(is.na(df_prod$Product_ID) | !nzchar(df_prod$Product_ID))
+        if (length(need_id)) {
+          uni <- df_prod[need_id, product_fields, drop = FALSE] %>% distinct()
+          new_ids <- next_product_ids(nrow(uni))
+          uni$key <- build_product_key(uni)
+          df_prod$key <- build_product_key(df_prod[, product_fields, drop = FALSE])
+          id_map <- tibble(key = uni$key, Product_ID = new_ids)
+          df_prod <- df_prod %>%
+            left_join(id_map, by = "key", suffix = c("", ".new")) %>%
+            mutate(Product_ID = ifelse(is.na(.data$Product_ID) | !nzchar(.data$Product_ID),
+                                       .data$Product_ID.new, .data$Product_ID)) %>%
+            select(-one_of(c("key", "Product_ID.new")))
+        }
+        df_prod <- df_prod %>%
+          distinct(Product_ID, .keep_all = TRUE) %>%
+          ensure_cols_order(c("Product_ID", product_fields))
+        df_prod <- as_char_df(df_prod)
+        
+        pending_prod <- df_prod
+        summary_lines <- c(summary_lines, sprintf("Detected product-only upload: %d product row(s).", nrow(df_prod)))
+        
+      } else if (kind %in% c("scenario_full", "scenario_partial_with_id", "scenario_partial_no_id")) {
+        scen_cols_all <- c("Product_ID", product_fields, scenario_fields, scenario_textarea_label)
+        df_scen <- df[, intersect(names(df), scen_cols_all), drop = FALSE]
+        
+        if (!"Product_ID" %in% names(df_scen)) {
+          # No Product_ID in upload: match/create by key
+          m <- match_or_create_products(df_scen)
+          if (nrow(m$to_add)) {
+            pending_prod <- bind_rows(pending_prod %||% make_empty_prod(), m$to_add)
+            summary_lines <- c(summary_lines, sprintf("Created %d new product(s) from scenario upload.", nrow(m$to_add)))
+          }
+          keys <- build_product_key(df_scen[, product_fields, drop = FALSE])
+          df_scen$Product_ID <- unname(m$map[keys])
+        } else {
+          # Product_ID present: respect it and ensure a matching product row exists
+          prod_from_upload <- df_scen[, intersect(names(df_scen), c("Product_ID", product_fields)), drop = FALSE] %>%
+            dplyr::distinct(Product_ID, .keep_all = TRUE)
+          
+          existing_pids <- prod_dat()$Product_ID %||% character(0)
+          prod_to_add <- prod_from_upload %>%
+            dplyr::filter(!.data$Product_ID %in% existing_pids) %>%
+            ensure_cols_order(c("Product_ID", product_fields))
+          
+          if (nrow(prod_to_add)) {
+            prod_to_add <- as_char_df(prod_to_add)
+            pending_prod <- dplyr::bind_rows(pending_prod %||% make_empty_prod(), prod_to_add) %>%
+              dplyr::distinct(Product_ID, .keep_all = TRUE)
+            summary_lines <- c(summary_lines, sprintf("Detected %d new product(s) by Product_ID; will add.", nrow(prod_to_add)))
+          }
+        }
+        
+        # Remove scenarios that still lack a Product_ID after linking
+        missing_pid <- which(is.na(df_scen$Product_ID) | !nzchar(df_scen$Product_ID))
+        if (length(missing_pid)) {
+          showNotification(sprintf("Skipping %d scenario row(s) that could not be linked to a product.", length(missing_pid)),
+                           type = "warning", duration = 8)
+          df_scen <- df_scen[-missing_pid, , drop = FALSE]
+        }
+        if (!nrow(df_scen)) {
+          showNotification("No scenario rows remain after linking.", type = "error")
+          return()
+        }
+        
+        # Stage pending products (if any) so we can fill canonical product columns for preview
+        staged_prod <- prod_dat()
+        if (!is.null(pending_prod) && nrow(pending_prod)) {
+          staged_prod <- staged_prod %>%
+            bind_rows(pending_prod) %>%
+            distinct(Product_ID, .keep_all = TRUE)
+        }
+        old_prod_dat <- prod_dat()
+        prod_dat(staged_prod)  # temporarily stage for fill
+        df_scen <- fill_product_columns_from_master(df_scen)
+        prod_dat(old_prod_dat) # revert
+        df_scen <- ensure_cols_order(df_scen, scen_cols_all)
+        df_scen <- as_char_df(df_scen)
+        
+        pending_scen <- df_scen
+        summary_lines <- c(summary_lines, sprintf("Detected scenario upload: %d scenario row(s).", nrow(df_scen)))
+        
+      } else {
+        showNotification("Could not recognize CSV as product or scenario data. Check column names.", type = "error", duration = 8)
+        return()
+      }
+      
+      choices <- c()
+      if (!is.null(pending_prod) && nrow(pending_prod)) choices <- c(choices, "Append products", "Replace products")
+      if (!is.null(pending_scen) && nrow(pending_scen)) choices <- c(choices, "Append scenarios", "Replace scenarios")
+      if (!length(choices)) {
+        showNotification("Nothing to import.", type = "warning")
+        return()
+      }
+      
+      showModal(modalDialog(
+        title = "Smart upload: review and commit",
+        size = "m",
+        tagList(
+          tags$ul(lapply(summary_lines, tags$li)),
+          checkboxGroupInput("smart_upload_actions", "Choose commit actions:",
+                             choices = choices,
+                             selected = if (any(grepl("^Append", choices))) choices[grepl("^Append", choices)] else choices),
+          tags$small(class = "text-muted", "Tip: Append adds to existing rows; Replace overwrites the entire table.")
+        ),
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton("commit_upload_any", "Commit", class = "btn-success")
+        ),
+        easyClose = FALSE
+      ))
+      
+      observeEvent(input$commit_upload_any, {
+        removeModal()
+        
+        if (!is.null(pending_prod) && nrow(pending_prod)) {
+          pending_prod <- as_char_df(pending_prod)
+          if ("Replace products" %in% input$smart_upload_actions) {
+            prod_dat(pending_prod %>% distinct(Product_ID, .keep_all = TRUE))
+          } else if ("Append products" %in% input$smart_upload_actions) {
+            prod_dat(bind_rows(prod_dat(), pending_prod) %>% distinct(Product_ID, .keep_all = TRUE))
+          }
+        }
+        
+        if (!is.null(pending_scen) && nrow(pending_scen)) {
+          df_scen_final <- fill_product_columns_from_master(pending_scen)
+          df_scen_final <- as_char_df(df_scen_final)
+          if ("Replace scenarios" %in% input$smart_upload_actions) {
+            scen_dat(df_scen_final)
+          } else if ("Append scenarios" %in% input$smart_upload_actions) {
+            scen_dat(bind_rows(scen_dat(), df_scen_final) %>% distinct())
+          }
+        }
+        
+        # Refresh the Linked product dropdown after commit
+        ch <- product_choices()
+        sel <- if (length(ch)) unname(tail(ch, 1)) else NULL
+        updateSelectInput(session, "current_product", choices = ch, selected = sel)
+        
+        showNotification("Smart upload completed.", type = "message")
+      }, ignoreInit = TRUE, once = TRUE)
+    }, ignoreInit = TRUE, once = TRUE)
+  }
+  
+  # Trigger Smart Upload from both tabs (replacing old Upload CSV buttons)
+  observeEvent(input$upload_any_prod, start_smart_upload())
+  observeEvent(input$upload_any_scen, start_smart_upload())
+  
+  # ---------------- Load vocab ----------------
+  observe({
+    validate(need(file.exists(workbook_path),
+                  paste("Workbook not found. Check path:\n", workbook_path)))
+    vocab(build_vocab(workbook_path))
+  })
+  observeEvent(input$reload, {
+    vocab(build_vocab(workbook_path))
+    showNotification("Workbook reloaded.", type = "message")
+  })
+  
+  # Diagnostics for empty picklists
+  observeEvent(vocab(), {
+    cu <- length(vocab()[["Crop Use Site"]] %||% character(0))
+    ncu <- length(vocab()[["Non Crop Use Site"]] %||% character(0))
+    if (cu == 0 || ncu == 0) {
+      showNotification(
+        sprintf("Picklist empty? Crop Use Site = %d items, Non Crop Use Site = %d items. Check sheet/column names.", cu, ncu),
+        type = "warning", duration = 7
+      )
+    }
+  }, once = TRUE)
 }
 
 shinyApp(ui, server)

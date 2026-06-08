@@ -32,10 +32,22 @@ extract_number <- function(x) {
   num <- stringr::str_extract(s, "-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?")
   suppressWarnings(as.numeric(num))
 }
+# Coerce uploaded data to the expected schema (all character columns, correct order)
+ensure_expected_columns <- function(df, expected_labels) {
+  # Keep only expected columns
+  df <- dplyr::select(df, dplyr::any_of(expected_labels))
+  # Add any missing expected columns as NA_character_
+  missing <- setdiff(expected_labels, names(df))
+  for (m in missing) df[[m]] <- NA_character_
+  # Reorder to expected order and coerce all to character
+  df <- dplyr::select(df, dplyr::all_of(expected_labels))
+  df <- dplyr::mutate(df, dplyr::across(dplyr::everything(), as.character))
+  df
+}
 
 # ---------------- Read vocab from workbook ----------------
 read_vocab_col <- function(path, sheet, col_name) {
-  dat <- suppressMessages(read_excel(path, sheet = sheet))
+  dat <- suppressMessages(readxl::read_excel(path, sheet = sheet))
   if (!col_name %in% names(dat)) return(character(0))
   vals <- dat[[col_name]]
   vals <- as.character(vals)
@@ -44,7 +56,7 @@ read_vocab_col <- function(path, sheet, col_name) {
   sort(unique(vals))
 }
 read_vocab_range <- function(path, sheet, range) {
-  dat <- suppressMessages(read_excel(path, sheet = sheet, range = range, col_names = FALSE))
+  dat <- suppressMessages(readxl::read_excel(path, sheet = sheet, range = range, col_names = FALSE))
   vals <- unlist(dat, use.names = FALSE)
   vals <- as.character(vals)
   vals <- trimws(vals)
@@ -124,7 +136,7 @@ unit_choices_for_field <- function(field) {
   ))
 }
 
-# ---------- UI: numeric + numerator-unit + area-unit (open selectize) ----------
+# ---------- UI: numeric + numerator-unit + area-unit ----------
 make_area_rate_input <- function(field_label,
                                  default_num_unit = "lb",
                                  default_area_unit = "ac",
@@ -165,7 +177,7 @@ make_area_rate_input <- function(field_label,
                   areaunit_id, label = NULL, choices = area_units,
                   selected = default_area_unit, width = NULL,
                   options = list(
-                    create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE,
+                    create = TRUE, createOnOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE,
                     dropdownParent = "body"
                   )
                 )
@@ -175,7 +187,7 @@ make_area_rate_input <- function(field_label,
   )
 }
 
-# ---------- Parser to restore units (preserves custom units) ----------
+# ---------- Parser to restore units ----------
 parse_rate_units <- function(x, default_num = "lb", default_area = "ac") {
   s <- as.character(x %||% "")
   rest <- sub("^\\s*-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\s*", "", s, perl = TRUE)
@@ -271,23 +283,14 @@ ui <- fluidPage(
       }
     ")),
     tags$style(HTML("
-    /* Row layout for numeric + units */
     .ust-rate-row { display:flex; align-items:center; gap:6px; flex-wrap: nowrap; }
     .ust-rate-row .ust-numeric { flex: 1 1 auto; min-width: 0; }
     .ust-rate-row .ust-units { display:flex; align-items:center; gap:6px; flex: 0 0 auto; }
-
-    /* Shiny forces input containers to 100% width; override for our unit inputs */
     .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
-
-    .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
-    /* First unit (numerator) */
     .ust-units .ust-unit:first-of-type .selectize-control { width: auto !important; min-width: 60px; }
-    /* Second unit (area) */
     .ust-units .ust-unit:last-of-type .selectize-control  { width: auto !important; min-width: 60px; }
     .ust-units .selectize-control .selectize-input { width: auto; white-space: nowrap; }
-
     .ust-units .sep { padding: 0 2px; color: #555; }
-
     .selectize-control.single .selectize-input,
     .selectize-control.single .selectize-input.input-active {
       min-height: calc(2.25rem + 2px);
@@ -295,43 +298,35 @@ ui <- fluidPage(
       line-height: 1.5;
       box-sizing: border-box;
     }
-    .selectize-control.single .selectize-input > input {
-      height: 1.5rem;
-    }
+    .selectize-control.single .selectize-input > input { height: 1.5rem; }
   "))
   ),
   tags$head(
     tags$style(HTML("
-    /* Let the caret render outside the input box */
     .ust-units .selectize-control.single .selectize-input {
-      overflow: visible;           /* default is hidden; allow caret to overflow */
-      padding-right: .75rem;       /* remove the extra right padding selectize reserves */
+      overflow: visible;
+      padding-right: .75rem;
       position: relative;
     }
-  
     .ust-units .selectize-control.single .selectize-input:after {
-      right: -12px !important;     /* negative pushes it outside */
-      border-top-color: #6c757d;   /* subtle color */
+      right: -12px !important;
+      border-top-color: #6c757d;
       opacity: 0.9;
     }
-
-   
     .ust-units .selectize-control.single .selectize-input.dropdown-active:after {
       border-width: 0 6px 6px 6px;
       border-color: transparent transparent #6c757d transparent;
       margin-top: -1px;
     }
-
-    /* Ensure unit inputs don't stretch full width */
     .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
-    .ust-units .selectize-control       { width: auto !important; min-width: 120px; }
+    .ust-units .selectize-control { width: auto !important; min-width: 120px; }
   "))
   ),
-  
   tags$style(type = "text/css", "
     .navbar-brand { color: #000000 !important; font-weight: bold !important; }
   "),
   tags$head(tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png")),
+  
   div(
     id = "resizable",
     navbarPage(
@@ -341,78 +336,59 @@ ui <- fluidPage(
       ),
       id = "navbar",
       tabPanel(
-        "Product-Level", value = "product",
-        div(
-          class = "hdr",
-          h4("Product-Level"),
-          br(),
-          fluidRow(
-            column(
-              4,
-              actionButton("reload", "Reload workbook", icon = icon("redo")),
-              actionButton("clear_prod", "Clear form", icon = icon("eraser"), class = "ms-1"),
-              actionButton("add_prod", "Add row", class = "btn-primary ms-1", icon = icon("plus")),
-              hr(),
-              uiOutput("product_form_col1")
-            ),
-            column(4, uiOutput("product_form_col2")),
-            column(4, uiOutput("product_form_col3"))
-          )
-        )
-      ),
-      tabPanel(
-        "Scenario-Level", value = "scenario",
-        div(
-          class = "hdr",
-          fluidRow(
-            column(
-              4,
-              h4("Scenario-Level"),
-              uiOutput("current_product_ui"),
-              br(),
-              actionButton("relink_selected", "Relink selected scenarios", class = "btn-outline-secondary", icon = icon("sync-alt")),
-              actionButton("clear_scenario", "Clear form", icon = icon("eraser")),
-              actionButton("add_scen", "Add row", class = "btn-primary", icon = icon("plus")),
-              hr(),
-              uiOutput("scenario_form_col1")
-            ),
-            column(4, uiOutput("scenario_form_col2")),
-            column(4, uiOutput("scenario_form_col3"))
-          )
-        )
-      )
-    )
-  ),
-  fluidRow(
-    column(
-      12,
-      tags$hr(style = "border-top: 2px solid #333; margin-top: 10px;"),
-      tabsetPanel(
-        id = "data_tables",
-        tabPanel(
-          "Product-Level Table", value = "product",
-          div(class = "mb-2", style = "margin-top:10px",
-              actionButton("del_prod", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")),
-          div(
-            style = "margin-top:5px",
-            DTOutput("tbl_prod"),
-            div(style = "float:left;",
-                downloadButton("dl_prod", "Download product-level CSV"),
-                actionButton("upload_prod", "Upload CSV", icon=icon("upload"),class = "btn-secondary ms-2"))
+        "Data Entry", value = "main",
+        
+        # Product inputs (always visible)
+        fluidRow(
+          column(
+            12,
+            h4("Product-Level Inputs"),
+            actionButton("reload", "Reload workbook", icon = icon("redo")),
+            actionButton("clear_all", "Clear form", icon = icon("eraser"), class = "ms-1"),
+            actionButton("add_entry", "Add row", class = "btn-primary ms-1", icon = icon("plus")),
+            hr(),
+            fluidRow(
+              column(4, uiOutput("product_form_col1")),
+              column(4, uiOutput("product_form_col2")),
+              column(4, uiOutput("product_form_col3"))
+            )
           )
         ),
-        tabPanel(
-          "Scenario-Level Table", value = "scenario",
-          div(class = "mb-2", style = "margin-top:10px",
-              actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
-              actionButton("dup_scen", "Duplicate selected", icon = icon("copy"), class = "btn-outline-secondary me-2"),
-              actionButton("del_scen", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")),
-          div(
-            style = "margin-top:5px",
-            DTOutput("tbl_scen"),
-            div(style = "float:left;",
-                downloadButton("dl_scen", "Download scenario-level CSV"),
-                actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2"))
+        
+        tags$hr(),
+        
+        # Scenario inputs
+        fluidRow(
+          column(
+            12,
+            h4("Scenario-Level Inputs"),
+            hr()
+          )
+        ),
+        fluidRow(
+          column(4, uiOutput("scenario_form_col1")),
+          column(4, uiOutput("scenario_form_col2")),
+          column(4, uiOutput("scenario_form_col3"))
+        ),
+        
+        tags$hr(),
+        
+        # Combined table (product + scenario columns)
+        fluidRow(
+          column(
+            12,
+            div(class = "mb-2", style = "margin-top:10px",
+                actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
+                actionButton("dup_scen", "Duplicate selected", icon = icon("copy"), class = "btn-outline-secondary me-2"),
+                actionButton("del_scen", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")
+            ),
+            div(
+              style = "margin-top:5px",
+              DTOutput("tbl_scen"),
+              div(style = "float:left;",
+                  downloadButton("dl_scen", "Download CSV"),
+                  actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2"))
+            )
           )
         )
       )
@@ -424,128 +400,89 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   vocab <- reactiveVal(NULL)
   
-  # Empty schemas
-  make_empty_prod <- function() {
-    cols <- c("Product_ID", product_fields)
-    as_tibble(setNames(rep(list(character()), length(cols)), cols))
-  }
+  # Empty schema: table stores BOTH product + scenario fields (no Product_ID)
   make_empty_scen <- function() {
-    cols <- c("Product_ID", product_fields, scenario_fields, scenario_textarea_label)
-    as_tibble(setNames(rep(list(character()), length(cols)), cols))
+    cols <- c(product_fields, scenario_fields, scenario_textarea_label)
+    tibble::as_tibble(setNames(rep(list(character()), length(cols)), cols))
   }
-  
-  prod_dat <- reactiveVal(make_empty_prod())
   scen_dat <- reactiveVal(make_empty_scen())
   
-  ## Function to show modal for file upload
-  show_upload_modal <- function(table_type) {
+  # ---- Upload modal (combined table) ----
+  show_upload_modal <- function() {
     modalDialog(
-      fileInput(paste0("file_upload_", table_type), "Choose CSV File", accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")),
+      fileInput("file_upload_scenario", "Choose CSV File", accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")),
       footer = tagList(
         modalButton("Cancel"),
-        actionButton(paste0("confirm_upload_", table_type), "Upload", class = "btn-primary")
+        actionButton("confirm_upload_scenario", "Upload", class = "btn-primary")
       ),
       easyClose = FALSE,
       size = "m",
-      title = paste("Upload to", table_type, "Table")
+      title = "Upload to Table"
     )
   }
   
-  ## Observer to show upload modal for product
-  observeEvent(input$upload_prod, {
-    showModal(show_upload_modal("product"))
-    observeEvent(input$confirm_upload_product, {
-      removeModal()
-      if (is.null(input$file_upload_product)) {
-        showNotification("No file selected.", type = "error")
-        return()
-      }
-      data <- tryCatch({
-        read.csv(input$file_upload_product$datapath, stringsAsFactors = FALSE, check.names = FALSE)
-      }, error = function(e) {
-        showNotification("Failed to read file.", type = "error")
-        return(NULL)
-      })
-      
-      if (!is.null(data)) {
-        required_fields <- map_chr(c("Product_ID", product_fields), idsafe)
-        uploaded_fields <- map_chr(names(data), idsafe)
-        
-        if (!all(required_fields %in% uploaded_fields)) {
-          showNotification("File format does not match product-level fields. It should contain all the required columns.", type = "error")
-          return()
-        }
-        
-        showModal(modalDialog(
-          title = "File Uploaded Successfully",
-          selectInput("upload_mode_prod", "Choose an option:", choices = c("Append", "Replace")),
-          footer = tagList(
-            modalButton("Cancel"),
-            actionButton("commit_upload_prod", "Commit Changes", class = "btn-success")
-          ),
-          easyClose = FALSE
-        ))
-        
-        observeEvent(input$commit_upload_prod, {
-          if (input$upload_mode_prod == "Append") {
-            merged_data <- distinct(dplyr::bind_rows(prod_dat(), data))
-            prod_dat(merged_data)  # Assign new data directly
-          } else {
-            prod_dat(data)
-          }
-          removeModal()
-          showNotification("Data uploaded successfully.", type = "message")
-        })
-      }
-    })
-  })
-  
-  ## Observer to show upload modal for scenario
   observeEvent(input$upload_scen, {
-    showModal(show_upload_modal("scenario"))
+    showModal(modalDialog(
+      fileInput("file_upload_scenario", "Choose CSV File",
+                accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")),
+      footer = tagList(modalButton("Cancel"),
+                       actionButton("confirm_upload_scenario", "Upload", class = "btn-primary")),
+      easyClose = FALSE, size = "m", title = "Upload to Table"
+    ))
+    
     observeEvent(input$confirm_upload_scenario, {
       removeModal()
       if (is.null(input$file_upload_scenario)) {
         showNotification("No file selected.", type = "error")
         return()
       }
+      
+      # Recommended: read all as character using readr
       data <- tryCatch({
-        read.csv(input$file_upload_scenario$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+        readr::read_csv(
+          input$file_upload_scenario$datapath,
+          col_types = readr::cols(.default = readr::col_character()),
+          show_col_types = FALSE, progress = FALSE
+        )
       }, error = function(e) {
         showNotification("Failed to read file.", type = "error")
         return(NULL)
       })
+      if (is.null(data)) return()
       
-      if (!is.null(data)) {
-        expected_fields <- map_chr(c("Product_ID", product_fields, scenario_fields, scenario_textarea_label), idsafe)
-        uploaded_fields <- map_chr(names(data), idsafe)
-        
-        if (!all(expected_fields %in% uploaded_fields)) {
-          showNotification("File format does not match scenario-level fields. It should contain all the required columns.", type = "error")
-          return()
-        }
-        
-        showModal(modalDialog(
-          title = "File Uploaded Successfully",
-          selectInput("upload_mode_scen", "Choose an option:", choices = c("Append", "Replace")),
-          footer = tagList(
-            modalButton("Cancel"),
-            actionButton("commit_upload_scen", "Commit Changes", class = "btn-success")
-          ),
-          easyClose = FALSE
-        ))
-        
-        observeEvent(input$commit_upload_scen, {
-          if (input$upload_mode_scen == "Append") {
-            merged_data <- distinct(dplyr::bind_rows(scen_dat(), data))
-            scen_dat(merged_data)  # Assign new data directly
-          } else {
-            scen_dat(data)
-          }
-          removeModal()
-          showNotification("Data uploaded successfully.", type = "message")
-        })
+      # Validate required columns (using idsafe for comparison)
+      expected_labels <- c(product_fields, scenario_fields, scenario_textarea_label)
+      expected_fields <- purrr::map_chr(expected_labels, idsafe)
+      uploaded_fields <- purrr::map_chr(names(data), idsafe)
+      if (!all(expected_fields %in% uploaded_fields)) {
+        showNotification("File format does not match expected fields. It should contain all required columns.",
+                         type = "error")
+        return()
       }
+      
+      # Coerce uploaded data to expected schema (all character, correct order)
+      data <- ensure_expected_columns(data, expected_labels)
+      
+      showModal(modalDialog(
+        title = "File Uploaded Successfully",
+        selectInput("upload_mode_scen", "Choose an option:", choices = c("Append", "Replace")),
+        footer = tagList(modalButton("Cancel"),
+                         actionButton("commit_upload_scen", "Commit Changes", class = "btn-success")),
+        easyClose = FALSE
+      ))
+      
+      observeEvent(input$commit_upload_scen, {
+        if (input$upload_mode_scen == "Append") {
+          # Also coerce existing data to the same schema, just in case
+          existing <- ensure_expected_columns(scen_dat(), expected_labels)
+          merged_data <- dplyr::bind_rows(existing, data) %>% dplyr::distinct()
+          scen_dat(merged_data)
+        } else {
+          scen_dat(data)
+        }
+        removeModal()
+        showNotification("Data uploaded successfully.", type = "message")
+      })
     })
   })
   
@@ -559,8 +496,6 @@ server <- function(input, output, session) {
     vocab(build_vocab(workbook_path))
     showNotification("Workbook reloaded.", type = "message")
   })
-  
-  # Diagnostics for empty picklists
   observeEvent(vocab(), {
     cu <- length(vocab()[["Crop Use Site"]] %||% character(0))
     ncu <- length(vocab()[["Non Crop Use Site"]] %||% character(0))
@@ -596,25 +531,6 @@ server <- function(input, output, session) {
       make_input("RUP", "pick", choices = vocab()[["RUP"]], prefix = "prod__", multiple = FALSE),
       make_input("Product-level PPE", "pick", choices = vocab()[["Product-level PPE"]], prefix = "prod__", multiple = TRUE)
     )
-  })
-  
-  # Linked product dropdown for scenarios
-  product_choices <- reactive({
-    pd <- prod_dat()
-    if (nrow(pd) == 0) return(setNames(character(0), character(0)))
-    s <- function(x) ifelse(is.na(x) | x == "", "", as.character(x))
-    ai  <- s(pd$`AI Name`)
-    epa <- if ("EPA Registration Number" %in% names(pd)) s(pd$`EPA Registration Number`) else ""
-    lbl <- ifelse(nzchar(epa) & nzchar(ai),
-                  paste0(ai, " (EPA Reg #", epa, ")"),
-                  ifelse(nzchar(ai), ai, ifelse(nzchar(epa), paste0("EPA Reg #", epa), "")))
-    lbl[!nzchar(lbl)] <- paste0("Product ", pd$Product_ID)
-    setNames(pd$Product_ID, lbl)
-  })
-  output$current_product_ui <- renderUI({
-    ch <- product_choices()
-    default_sel <- if (length(ch)) unname(tail(ch, 1)) else NULL
-    selectInput("current_product", "Linked product", choices = ch, selected = default_sel, width = "260px")
   })
   
   # ----- Scenario form (3 columns) -----
@@ -767,37 +683,15 @@ server <- function(input, output, session) {
     tibble::as_tibble(vals)
   }
   
-  # ----- Product actions -----
-  observeEvent(input$add_prod, {
-    new_row <- collect_row(input, product_fields, prefix = "prod__")
-    next_id_num <- nrow(prod_dat()) + 1
-    new_row <- tibble::add_column(new_row, Product_ID = sprintf("P%03d", next_id_num), .before = 1)
-    prod_dat(dplyr::bind_rows(prod_dat(), new_row))
-    updateSelectInput(session, "current_product",
-                      choices = product_choices(),
-                      selected = sprintf("P%03d", next_id_num))
-    updateTabsetPanel(session, "data_tables", selected = "product")
-    showNotification("Product-level row added.", type = "message")
-  })
-  
-  # ----- Scenario actions -----
-  observeEvent(input$add_scen, {
+  # ----- Unified Add row (product + scenario) -----
+  observeEvent(input$add_entry, {
     tryCatch({
-      pd <- prod_dat()
-      if (nrow(pd) == 0) {
-        showNotification("Please add a product first (Product-level > Add row).", type = "warning")
-        return()
-      }
-      cur_prod <- input$current_product
-      if (is.null(cur_prod) || !nzchar(cur_prod) || !any(pd$Product_ID == cur_prod)) {
-        showNotification("Please select a linked product in the 'Linked product' dropdown.", type = "warning")
-        return()
-      }
       if (!iv$is_valid()) {
         iv$enable(); iv$show()
-        showNotification("Please correct the highlighted scenario fields, then try again.", type = "error")
+        showNotification("Please correct the highlighted fields, then try again.", type = "error")
         return()
       }
+      # Scenario inputs
       scen_row <- collect_scenario_row(
         input, scenario_fields, prefix = "scen__",
         area_rate_fields   = scenario_area_rate_fields,
@@ -807,76 +701,66 @@ server <- function(input, output, session) {
       other <- input[[scenario_textarea_id]]
       scen_row[[scenario_textarea_label]] <- if (is.null(other) || !nzchar(other)) NA_character_ else other
       
-      prod_row <- pd %>%
-        dplyr::filter(Product_ID == cur_prod) %>%
-        dplyr::select(Product_ID, dplyr::all_of(product_fields))
-      if (nrow(prod_row) != 1) {
-        showNotification(sprintf("Expected 1 product row for '%s', found %d.", cur_prod, nrow(prod_row)), type = "error")
-        return()
-      }
-      new_row <- dplyr::bind_cols(prod_row[1, , drop = FALSE], scen_row)
-      sd_new <- dplyr::bind_rows(scen_dat(), new_row)
-      scen_dat(sd_new)
-      updateTabsetPanel(session, "data_tables", selected = "scenario")
-      showNotification(sprintf("Scenario-level row added. Total scenarios: %d", nrow(sd_new)), type = "message")
+      # Product inputs
+      prod_row <- collect_row(input, product_fields, prefix = "prod__")
+      
+      # Combine and append
+      new_row <- dplyr::bind_cols(prod_row, scen_row)
+      scen_dat(dplyr::bind_rows(scen_dat(), new_row))
+      showNotification(sprintf("Row added. Total entries: %d", nrow(scen_dat())), type = "message")
     }, error = function(e) {
-      showNotification(paste("Failed to add scenario:", conditionMessage(e)), type = "error", duration = 8)
+      showNotification(paste("Failed to add row:", conditionMessage(e)), type = "error", duration = 8)
     })
   })
   
-  observeEvent(input$relink_selected, {
-    pd <- prod_dat()
-    sd <- scen_dat()
-    cur_prod <- input$current_product
-    sel <- input$tbl_scen_rows_selected
-    if (nrow(pd) == 0 || is.null(cur_prod) || !any(pd$Product_ID == cur_prod)) {
-      showNotification("Select a product to relink to.", type = "warning")
-      return()
-    }
-    if (nrow(sd) == 0) {
-      showNotification("No scenario rows to relink.", type = "warning")
-      return()
-    }
-    if (length(sel) == 0) {
-      showNotification("Select one or more scenario rows in the table to relink.", type = "warning")
-      return()
-    }
-    pd_sel <- pd %>%
-      dplyr::filter(Product_ID == cur_prod) %>%
-      dplyr::select(Product_ID, dplyr::all_of(product_fields))
-    cols_to_update <- c("Product_ID", product_fields)
-    for (col in cols_to_update) {
-      if (!col %in% names(sd)) sd[[col]] <- NA_character_
-      sd[sel, col] <- pd_sel[[col]][1]
-    }
-    sd <- sd %>% dplyr::select(Product_ID, dplyr::all_of(product_fields), dplyr::everything())
-    scen_dat(sd)
-    showNotification(sprintf("Relinked %d selected scenario row(s) to the chosen product.", length(sel)), type = "message")
-  })
-  
+  # ----- Duplicate/Delete/Clone -----
   observeEvent(input$dup_scen, {
     sel <- input$tbl_scen_rows_selected
     if (length(sel) == 0) {
-      showNotification("Select one or more scenario rows to duplicate.", type = "warning")
+      showNotification("Select one or more rows to duplicate.", type = "warning")
       return()
     }
     sd <- scen_dat()
     copies <- sd[sel, , drop = FALSE]
     scen_dat(dplyr::bind_rows(sd, copies))
-    showNotification(sprintf("Duplicated %d scenario row(s).", length(sel)), type = "message")
+    showNotification(sprintf("Duplicated %d row(s).", length(sel)), type = "message")
+  })
+  
+  observeEvent(input$del_scen, {
+    sel <- input$tbl_scen_rows_selected
+    if (length(sel) == 0) {
+      showNotification("Select one or more rows to delete.", type = "warning")
+      return()
+    }
+    sd <- scen_dat()
+    sd <- sd[-sel, , drop = FALSE]
+    scen_dat(sd)
+    showNotification(sprintf("Deleted %d row(s).", length(sel)), type = "message")
   })
   
   observeEvent(input$clone_to_form, {
     sel <- input$tbl_scen_rows_selected
     if (length(sel) != 1) {
-      showNotification("Select exactly one scenario row to load into the form.", type = "warning")
+      showNotification("Select exactly one row to load into the form.", type = "warning")
       return()
     }
     sd <- scen_dat()
     row <- sd[sel, , drop = FALSE]
-    if ("Product_ID" %in% names(row)) {
-      updateSelectInput(session, "current_product", choices = product_choices(), selected = row$Product_ID[1])
+    
+    # Populate product inputs
+    for (nm in product_fields) {
+      id <- paste0("prod__", idsafe(nm))
+      val <- row[[nm]][1] %||% ""
+      if (nm %in% c("Physical Form", "Product-level PPE")) {
+        try(updateSelectizeInput(session, id, selected = split_multi(val)), silent = TRUE)
+      } else if (nm == "RUP") {
+        try(updateSelectizeInput(session, id, selected = if (nzchar(val)) val else NULL), silent = TRUE)
+      } else {
+        try(updateTextInput(session, id, value = val), silent = TRUE)
+      }
     }
+    
+    # Populate scenario picklists
     for (nm in scenario_picklist_fields) {
       id <- paste0("scen__", idsafe(nm))
       vals <- split_multi(row[[nm]][1] %||% "")
@@ -885,11 +769,13 @@ server <- function(input, output, session) {
       ch <- c(ch, missing)
       try(updateSelectizeInput(session, id, choices = ch, selected = vals), silent = TRUE)
     }
+    # Numeric
     for (nm in scenario_numeric_fields) {
       id <- paste0("scen__", idsafe(nm))
       val_num <- extract_number(row[[nm]][1] %||% "")
       try(updateNumericInput(session, id, value = val_num), silent = TRUE)
     }
+    # Area-rate (value + units)
     for (nm in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(nm))
       numunit_id  <- paste0(base_id, "__numunit")
@@ -905,134 +791,36 @@ server <- function(input, output, session) {
       try(updateSelectizeInput(session, numunit_id, choices = num_choices, selected = units$num),  silent = TRUE)
       try(updateSelectizeInput(session, areaunit_id, choices = area_choices, selected = units$area), silent = TRUE)
     }
-    text_fields <- setdiff(scenario_fields, c(scenario_picklist_fields, scenario_numeric_fields, scenario_area_rate_fields))
-    for (nm in text_fields) {
-      id <- paste0("scen__", idsafe(nm))
-      val <- row[[nm]][1] %||% ""
-      try(updateTextInput(session, id, value = val), silent = TRUE)
-    }
+    # Other textarea
     if (scenario_textarea_label %in% names(row)) {
       try(updateTextAreaInput(session, scenario_textarea_id, value = row[[scenario_textarea_label]][1] %||% ""), silent = TRUE)
     }
-    showNotification("Scenario loaded into form. Edit fields and click 'Add row' to save as a new scenario.", type = "message")
+    showNotification("Row loaded into form. Edit and click 'Add row' to save a new entry.", type = "message")
   })
   
-  # ----- Delete selected -----
-  observeEvent(input$del_prod, {
-    pd <- prod_dat()
-    sel <- input$tbl_prod_rows_selected
-    if (length(sel) == 0) {
-      showNotification("Select one or more product rows to delete.", type = "warning")
-      return()
-    }
-    ids_to_delete <- pd$Product_ID[sel]
-    sd <- scen_dat()
-    n_linked <- if ("Product_ID" %in% names(sd)) sum(sd$Product_ID %in% ids_to_delete) else 0
-    showModal(modalDialog(
-      title = "Confirm deletion",
-      size = "m",
-      tagList(
-        tags$p(sprintf("You are about to delete %d product row(s).", length(sel))),
-        if (n_linked > 0) tags$p(sprintf("There are %d linked scenario row(s) referencing these products.", n_linked)),
-        checkboxInput("delete_linked", "Also delete linked scenario rows (cascade delete)", value = n_linked > 0)
-      ),
-      footer = tagList(
-        modalButton("Cancel"),
-        actionButton("confirm_delete_products", "Delete", class = "btn-danger")
-      ),
-      easyClose = FALSE
-    ))
-  })
-  observeEvent(input$confirm_delete_products, {
-    removeModal()
-    pd <- prod_dat()
-    sd <- scen_dat()
-    sel <- input$tbl_prod_rows_selected
-    if (length(sel) == 0) return()
-    ids_to_delete <- pd$Product_ID[sel]
-    if (isTRUE(input$delete_linked) && "Product_ID" %in% names(sd)) {
-      sd <- sd %>% dplyr::filter(!(Product_ID %in% ids_to_delete))
-      scen_dat(sd)
-    }
-    pd <- pd[-sel, , drop = FALSE]
-    prod_dat(pd)
-    updateSelectInput(session, "current_product", choices = product_choices(), selected = unname(tail(product_choices(), 1)))
-    showNotification(
-      sprintf("Deleted %d product row(s)%s.", length(sel), if (isTRUE(input$delete_linked)) " and linked scenarios" else ""),
-      type = "message"
-    )
-  })
-  
-  observeEvent(input$del_scen, {
-    sel <- input$tbl_scen_rows_selected
-    if (length(sel) == 0) {
-      showNotification("Select one or more scenario rows to delete.", type = "warning")
-      return()
-    }
-    sd <- scen_dat()
-    sd <- sd[-sel, , drop = FALSE]
-    scen_dat(sd)
-    showNotification(sprintf("Deleted %d scenario row(s).", length(sel)), type = "message")
-  })
-  
-  # ----- Tables -----
-  output$tbl_prod <- DT::renderDT({
-    dat <- prod_dat()
-    req(ncol(dat) > 0)
-    df <- as.data.frame(dat)
-    prod_idx <- which(names(df) == "Product_ID")
-    opts <- list(pageLength = 25, scrollX = TRUE, searching = FALSE, lengthChange = FALSE)
-    if (length(prod_idx) == 1) {
-      opts$columnDefs <- list(list(visible = FALSE, targets = prod_idx - 1))
-    }
-    DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
-  })
-  hidden_product_cols_in_scen <- c(
-    "AI Name",
-    "PC Code",
-    "Co-Formulated AI",
-    "Physical Form",
-    "% AI",
-    "AI Concentration (Or Product Density if liquid)",
-    "RUP",
-    "Product-level PPE"
-  )
+  # ----- Table -----
   output$tbl_scen <- DT::renderDT({
     dat <- scen_dat()
     req(ncol(dat) > 0)
     df <- as.data.frame(dat)
-    
-    # Columns to hide in the display (keep in data and downloads)
-    cols_to_hide <- c("Product_ID", hidden_product_cols_in_scen)
-    
-    # DataTables uses 0-based column indexes
-    targets <- which(names(df) %in% cols_to_hide) - 1
-    
     opts <- list(
       pageLength = 25,
       scrollX = TRUE,
       searching = FALSE,
-      lengthChange = FALSE,
-      columnDefs = list(
-        list(visible = FALSE, targets = targets)
-      )
+      lengthChange = FALSE
     )
-    
     DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
   
-  # ----- Downloads -----
-  output$dl_prod <- downloadHandler(
-    filename = function() paste0("product_entries_", Sys.Date(), ".csv"),
-    content  = function(file) readr::write_csv(prod_dat(), file, na = "")
-  )
+  # ----- Download -----
   output$dl_scen <- downloadHandler(
-    filename = function() paste0("scenario_entries_", Sys.Date(), ".csv"),
+    filename = function() paste0("entries_", Sys.Date(), ".csv"),
     content  = function(file) readr::write_csv(scen_dat(), file, na = "")
   )
   
-  # ---- Clear forms ----
-  observeEvent(input$clear_prod, {
+  # ---- Unified Clear form ----
+  observeEvent(input$clear_all, {
+    # Product
     product_text_fields <- c(
       "EPA Registration Number","PC Code","AI Name",
       "Co-Formulated AI","% AI",
@@ -1045,8 +833,8 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, "prod__Physical_Form", selected = character(0))
     updateSelectizeInput(session, "prod__Product_level_PPE", selected = character(0))
     updateSelectizeInput(session, "prod__RUP", selected = NULL)
-  })
-  observeEvent(input$clear_scenario, {
+    
+    # Scenario texts
     scenario_text_fields <- c(
       "Max # App/Year", "Max # App/Crop Cycle",
       "Max Number of Seasons/Crop Cycles per year",
@@ -1057,6 +845,7 @@ server <- function(input, output, session) {
       id <- paste0("scen__", idsafe(field))
       updateTextInput(session, id, value = "")
     })
+    # Scenario picklists
     scenario_select_fields <- c(
       "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
       "App Type", "App Equipment Type", "App Timing (Site)",
@@ -1068,10 +857,9 @@ server <- function(input, output, session) {
       id <- paste0("scen__", idsafe(field))
       updateSelectizeInput(session, id, selected = character(0))
     })
-    lapply(c("Buffered Area (ft)"), function(field) {
-      id <- paste0("scen__", idsafe(field))
-      updateNumericInput(session, id, value = NA_real_)
-    })
+    # Numerics
+    updateNumericInput(session, "scen__Buffered_Area_ft_", value = NA_real_)
+    # Area-rate: reset value + units
     for (f in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(f))
       numunit_id  <- paste0(base_id, "__numunit")
@@ -1083,7 +871,8 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, areaunit_id, choices = area_units,
                            selected = scenario_area_rate_defaults[[f]]$area)
     }
-    updateTextAreaInput(session, "scen__Other_Site_Scenario_Specific_Restrictions_Limitations", value = "")
+    # Text area
+    updateTextAreaInput(session, scenario_textarea_id, value = "")
   })
 }
 

@@ -8,6 +8,21 @@ library(purrr)
 library(stringr)
 library(tibble)
 library(shinyvalidate)
+library(shinythemes)
+
+library(shiny)
+library(bslib)
+library(shinyWidgets)
+library(DT)
+#install.packages("shinyjqui")
+
+library(shinyjqui)
+
+# Additional libraries, such as readxl, dplyr, etc., are assumed to be loaded as in your original script
+
+# Define the bslib theme if you want to apply one
+theme <- bs_theme(version = 5)
+
 
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
@@ -265,136 +280,113 @@ scenario_textarea_label <- "Other Site/Scenario Specific Restrictions & Limitati
 scenario_textarea_id    <- "scen__Other_Site_Scenario_Specific_Restrictions_Limitations"
 
 # ---------------- UI ----------------
-ui <- fluidPage(
+
+my_theme <- bs_theme(
+  version = 5,
+ # bootswatch = "minty", # Optional: base template
+  # 1. Reduce the global font size
+  "font-size-base" = "0.85rem", 
+  # 2. Reduce the global line height for tighter text spacing
+  "line-height-base" = "1.3"   
+) |> 
+  # 3. Inject custom CSS variables to override the layout sizes
+  bs_add_rules(c(
+    ":root {",
+    "  --bsb-sidebar-width: 200px; bsb-sidebar-width-md: 200px;", # Standard width
+    "  --bs-body-font-size: 0.85rem;", # Body text fallback
+    "}"
+  ))
+
+ui <- page_fillable(
+  theme = my_theme,
   tags$head(
+    tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png"),
     tags$style(HTML("
-      #resizable {
-        resize: vertical;
-        overflow: auto;
-        border: 1px solid #ddd;
-        padding: 10px;
-        height: auto;
+      .bslib-full-screen-enter {
+        bottom: auto !important;
+        top: 1px !important;
+        right: 1px !important;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
       }
-    ")),
-    tags$style(HTML("
-      table.dataTable thead th {
-        font-size: 11px;
-        color: #333;
+      .bslib-full-screen-enter svg {
+        transform: scale(0.75) !important;
       }
-    ")),
-    tags$style(HTML("
-    .ust-rate-row { display:flex; align-items:center; gap:6px; flex-wrap: nowrap; }
-    .ust-rate-row .ust-numeric { flex: 1 1 auto; min-width: 0; }
-    .ust-rate-row .ust-units { display:flex; align-items:center; gap:6px; flex: 0 0 auto; }
-    .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
-    .ust-units .ust-unit:first-of-type .selectize-control { width: auto !important; min-width: 60px; }
-    .ust-units .ust-unit:last-of-type .selectize-control  { width: auto !important; min-width: 60px; }
-    .ust-units .selectize-control .selectize-input { width: auto; white-space: nowrap; }
-    .ust-units .sep { padding: 0 2px; color: #555; }
-    .selectize-control.single .selectize-input,
-    .selectize-control.single .selectize-input.input-active {
-      min-height: calc(2.25rem + 2px);
-      padding: .375rem .75rem;
-      line-height: 1.5;
-      box-sizing: border-box;
-    }
-    .selectize-control.single .selectize-input > input { height: 1.5rem; }
-  "))
+    "))
   ),
-  tags$head(
-    tags$style(HTML("
-    .ust-units .selectize-control.single .selectize-input {
-      overflow: visible;
-      padding-right: .75rem;
-      position: relative;
-    }
-    .ust-units .selectize-control.single .selectize-input:after {
-      right: -12px !important;
-      border-top-color: #6c757d;
-      opacity: 0.9;
-    }
-    .ust-units .selectize-control.single .selectize-input.dropdown-active:after {
-      border-width: 0 6px 6px 6px;
-      border-color: transparent transparent #6c757d transparent;
-      margin-top: -1px;
-    }
-    .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
-    .ust-units .selectize-control { width: auto !important; min-width: 120px; }
-  "))
-  ),
-  tags$style(type = "text/css", "
-    .navbar-brand { color: #000000 !important; font-weight: bold !important; }
-  "),
-  tags$head(tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png")),
-  
-  div(
-    id = "resizable",
-    navbarPage(
-      title = div(
-        tags$img(src = "PLDET_icon.png", height = "30px", style = "vertical-align: middle;left-margin:1px"),
-        "Pesticide Label Data Entry Tool"
-      ),
-      id = "navbar",
-      tabPanel(
-        "Data Entry", value = "main",
-        
-        # Product inputs (always visible)
+
+  layout_columns(
+    col_widths=12,
+    gap="2px",
+
+
+    card(
+      full_screen=TRUE,
+      height="70vh",
+      card_header("Data Entry"),
+card_body(
+      layout_sidebar(
+        fill = FALSE,
+        sidebar = sidebar(
+          h4("Data Entry"),
+          actionButton("reload", "Reload workbook", icon = icon("redo")),
+          actionButton("clear_all", "Clear form", icon = icon("eraser")),
+          actionButton("add_entry", "Add row", class = "btn-primary", icon = icon("plus"))
+        ),
+
         fluidRow(
           column(
-            12,
+            4,
             h4("Product-Level Inputs"),
-            actionButton("reload", "Reload workbook", icon = icon("redo")),
-            actionButton("clear_all", "Clear form", icon = icon("eraser"), class = "ms-1"),
-            actionButton("add_entry", "Add row", class = "btn-primary ms-1", icon = icon("plus")),
-            hr(),
-            fluidRow(
-              column(4, uiOutput("product_form_col1")),
-              column(4, uiOutput("product_form_col2")),
-              column(4, uiOutput("product_form_col3"))
-            )
-          )
-        ),
-        
-        tags$hr(),
-        
-        # Scenario inputs
-        fluidRow(
-          column(
-            12,
-            h4("Scenario-Level Inputs"),
-            hr()
-          )
+            uiOutput("product_form_col1")),
+          column(4,
+                 uiOutput("product_form_col2")),
+          column(4,
+                 uiOutput("product_form_col3"))
         ),
         fluidRow(
-          column(4, uiOutput("scenario_form_col1")),
-          column(4, uiOutput("scenario_form_col2")),
-          column(4, uiOutput("scenario_form_col3"))
-        ),
-        
-        tags$hr(),
-        
-        # Combined table (product + scenario columns)
-        fluidRow(
-          column(
-            12,
-            div(class = "mb-2", style = "margin-top:10px",
-                actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt"), class = "btn-secondary me-2"),
-                actionButton("dup_scen", "Duplicate selected", icon = icon("copy"), class = "btn-outline-secondary me-2"),
-                actionButton("del_scen", "Delete selected", icon = icon("remove"), class = "btn-danger me-2")
-            ),
-            div(
-              style = "margin-top:5px",
-              DTOutput("tbl_scen"),
-              div(style = "float:left;",
-                  downloadButton("dl_scen", "Download CSV"),
-                  actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2"))
-            )
-          )
+          column(4,
+                 h4("Scenario-Level Inputs"),
+                 uiOutput("scenario_form_col1")),
+          column(4,
+                 uiOutput("scenario_form_col2")),
+          column(4,
+                 uiOutput("scenario_form_col3"))
         )
       )
+)
+    ),
+    card(
+      full_screen=TRUE,
+      height="30vh",
+      card_header("Data Display"),
+card_body(
+      layout_sidebar(
+        fill = FALSE,
+        sidebar = sidebar(
+          h4("Data Display Options"),
+          actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt")),
+          actionButton("dup_scen", "Duplicate selected", icon = icon("copy")),
+          actionButton("del_scen", "Delete selected", icon = icon("remove")),
+          hr(),
+          downloadButton("dl_scen", "Download CSV"),
+          actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2")
+        ),
+        DTOutput("tbl_scen")
+      )
     )
+)
   )
 )
+
 
 # ---------------- Server ----------------
 server <- function(input, output, session) {

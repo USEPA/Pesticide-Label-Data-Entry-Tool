@@ -297,6 +297,96 @@ my_theme <- bs_theme(
     "}"
   ))
 
+# ui <- page_fillable(
+#   theme = my_theme,
+#   tags$head(
+#     tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png"),
+#     tags$style(HTML("
+#       .bslib-full-screen-enter {
+#         bottom: auto !important;
+#         top: 1px !important;
+#         right: 1px !important;
+#         width: 28px !important;
+#         height: 28px !important;
+#         min-width: 28px !important;
+#         min-height: 28px !important;
+#         padding: 0 !important;
+#         display: inline-flex !important;
+#         align-items: center !important;
+#         justify-content: center !important;
+#         border-radius: 50% !important;
+#         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+#       }
+#       .bslib-full-screen-enter svg {
+#         transform: scale(0.75) !important;
+#       }
+#     "))
+#   ),
+# 
+#   layout_columns(
+#     col_widths=12,
+#     gap="2px",
+# 
+# 
+#     card(
+#       full_screen=TRUE,
+#       height="70vh",
+#       card_header("Data Entry"),
+# card_body(
+#       layout_sidebar(
+#         fill = FALSE,
+#         sidebar = sidebar(
+#           h4("Data Entry"),
+#           actionButton("reload", "Reload workbook", icon = icon("redo")),
+#           actionButton("clear_all", "Clear form", icon = icon("eraser")),
+#           actionButton("add_entry", "Add row", class = "btn-primary", icon = icon("plus"))
+#         ),
+# 
+#         fluidRow(
+#           column(
+#             4,
+#             h4("Product-Level Inputs"),
+#             uiOutput("product_form_col1")),
+#           column(4,
+#                  uiOutput("product_form_col2")),
+#           column(4,
+#                  uiOutput("product_form_col3"))
+#         ),
+#         fluidRow(
+#           column(4,
+#                  h4("Scenario-Level Inputs"),
+#                  uiOutput("scenario_form_col1")),
+#           column(4,
+#                  uiOutput("scenario_form_col2")),
+#           column(4,
+#                  uiOutput("scenario_form_col3"))
+#         )
+#       )
+# )
+#     ),
+#     card(
+#       full_screen=TRUE,
+#       height="30vh",
+#       card_header("Data Display"),
+# card_body(
+#       layout_sidebar(
+#         fill = FALSE,
+#         sidebar = sidebar(
+#           h4("Data Display Options"),
+#           actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt")),
+#           actionButton("dup_scen", "Duplicate selected", icon = icon("copy")),
+#           actionButton("del_scen", "Delete selected", icon = icon("remove")),
+#           hr(),
+#           downloadButton("dl_scen", "Download CSV"),
+#           actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2")
+#         ),
+#         DTOutput("tbl_scen")
+#       )
+#     )
+# )
+#   )
+# )
+
 ui <- page_fillable(
   theme = my_theme,
   tags$head(
@@ -320,28 +410,37 @@ ui <- page_fillable(
       .bslib-full-screen-enter svg {
         transform: scale(0.75) !important;
       }
+      .resizable-card {
+        transition: height 0.3s ease;
+      }
+      #toggle-resize-btn {
+        cursor: pointer;
+        background-color: transparent;
+        border: none;
+        font-size: 1.2em;
+        padding: 5px;
+        color: gray;
+      }
     "))
   ),
-
+  
   layout_columns(
     col_widths=12,
     gap="2px",
-
-
+    
     card(
       full_screen=TRUE,
       height="70vh",
-      card_header("Data Entry"),
-card_body(
-      layout_sidebar(
-        fill = FALSE,
-        sidebar = sidebar(
-          h4("Data Entry"),
-          actionButton("reload", "Reload workbook", icon = icon("redo")),
-          actionButton("clear_all", "Clear form", icon = icon("eraser")),
-          actionButton("add_entry", "Add row", class = "btn-primary", icon = icon("plus"))
-        ),
-
+      class = "resizable-card",
+      card_header(
+        fluidRow(
+          column(4, "Data Entry"),
+          column(4, style = "text-align: center;",
+                 actionButton("reload", "Reload workbook", icon = icon("redo"))),
+          column(4)
+        )
+      ),
+      card_body(
         fluidRow(
           column(
             4,
@@ -361,33 +460,67 @@ card_body(
           column(4,
                  uiOutput("scenario_form_col3"))
         )
+      ),
+      card_footer(
+        fluidRow(
+          column(4, actionButton("add_entry", "Add row", class = "btn-primary", icon = icon("plus"))),
+          column(4),
+          column(4, style = "text-align: right;", 
+                 actionButton("clear_all", "Clear form", icon = icon("eraser")))
+        )
       )
-)
     ),
     card(
       full_screen=TRUE,
       height="30vh",
-      card_header("Data Display"),
-card_body(
-      layout_sidebar(
-        fill = FALSE,
-        sidebar = sidebar(
-          h4("Data Display Options"),
-          actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt")),
-          actionButton("dup_scen", "Duplicate selected", icon = icon("copy")),
-          actionButton("del_scen", "Delete selected", icon = icon("remove")),
-          hr(),
-          downloadButton("dl_scen", "Download CSV"),
-          actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2")
-        ),
+      class = "resizable-card",
+      card_header(
+        fluidRow(
+          column(4, "Data Display"),
+          column(4, style = "text-align: center;", 
+                 actionButton("toggle-resize-btn", label = icon("arrow-up"), class = "btn-link")),
+          column(4, style = "text-align: right;")
+        )
+      ),
+      card_body(
         DTOutput("tbl_scen")
+      ),
+      card_footer(
+        fluidRow(
+          column(4,
+                 downloadButton("dl_scen", "Download CSV"),
+                 actionButton("upload_scen", "Upload CSV", icon = icon("upload"), class = "btn-secondary")),
+          column(4, style = "text-align: center;",
+                 actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt")),
+                 actionButton("dup_scen", "Duplicate selected", icon = icon("copy"))),
+          column(4, style = "text-align: right;",
+                 actionButton("del_scen", "Delete selected", icon = icon("remove")))
+        )
       )
     )
-)
-  )
-)
+  ),
+  
+  # Add JavaScript to handle button click, resize cards, and toggle icon
+  tags$script(HTML("
+    document.getElementById('toggle-resize-btn').addEventListener('click', function() {
+      var card1 = document.querySelectorAll('.resizable-card')[0];
+      var card2 = document.querySelectorAll('.resizable-card')[1];
+      var buttonIcon = document.querySelector('#toggle-resize-btn i');
 
-
+      if (card1.style.height !== '20vh') { // Check if it's not already in minimized state
+        card1.style.height = '20vh'; // small size for Data Entry
+        card2.style.height = '80vh'; // large size for Data Display
+        buttonIcon.classList.remove('fa-arrow-up'); // Change icon to down arrow
+        buttonIcon.classList.add('fa-arrow-down');
+      } else {
+        card1.style.height = '70vh'; // revert to original size for Data Entry
+        card2.style.height = '30vh'; // revert to original size for Data Display
+        buttonIcon.classList.remove('fa-arrow-down'); // Change icon to up arrow
+        buttonIcon.classList.add('fa-arrow-up');
+      }
+    });
+  "))
+)
 # ---------------- Server ----------------
 server <- function(input, output, session) {
   vocab <- reactiveVal(NULL)

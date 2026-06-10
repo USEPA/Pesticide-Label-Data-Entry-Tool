@@ -9,23 +9,22 @@ library(stringr)
 library(tibble)
 library(shinyvalidate)
 library(shinythemes)
-
 library(shiny)
 library(bslib)
 library(shinyWidgets)
 library(DT)
-#install.packages("shinyjqui")
 
-library(shinyjqui)
 
-# Additional libraries, such as readxl, dplyr, etc., are assumed to be loaded as in your original script
 
-# Define the bslib theme if you want to apply one
-theme <- bs_theme(version = 5)
 
+# - Manifest 
+#rsconnect::writeManifest()
 
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
+
+# Define the bslib theme if you want to apply one
+theme <- bs_theme(version = 5)
 
 # ---------------- Helpers ----------------
 `%||%` <- function(x, y) { if (is.null(x) || length(x) == 0) y else x }

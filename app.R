@@ -191,7 +191,7 @@ make_area_rate_input <- function(field_label,
                   areaunit_id, label = NULL, choices = area_units,
                   selected = default_area_unit, width = NULL,
                   options = list(
-                    create = TRUE, createOnOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE,
+                    create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE,
                     dropdownParent = "body"
                   )
                 )
@@ -419,7 +419,34 @@ ui <- page_fillable(
         font-size: 1.2em;
         padding: 5px;
         color: gray;
+        
       }
+      
+       /* Keep the number + two unit selects on one line */
+      .ust-rate-row { display:flex; align-items:center; gap:6px; flex-wrap: nowrap; }
+      .ust-rate-row .ust-numeric { flex: 1 1 auto; min-width: 70px; }
+      .ust-rate-row .ust-units   { display:flex; align-items:center; gap:6px; flex: 0 0 auto; white-space: nowrap; }
+      .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
+      .ust-units .ust-unit .selectize-control { width: auto !important; }
+      .ust-units .ust-unit:first-of-type .selectize-control { min-width: 50px; } /* numerator unit */
+      .ust-units .ust-unit:last-of-type  .selectize-control { min-width: 50px; } /* area unit */
+
+      /* Ensure selectize content doesn't wrap weirdly and allow external caret */
+      .ust-units .selectize-control .selectize-input {
+        width: auto; white-space: nowrap; overflow: visible; box-sizing: border-box;
+      }
+      .ust-units .selectize-control.single .selectize-input:after { display: none !important; }
+      .ust-units .ust-unit { position: relative; margin-right: 12px; }
+      .ust-units .ust-unit::after {
+        content: ''; position: absolute; right: -10px; top: 50%; margin-top: -3px;
+        border: 6px solid transparent; border-top-color: #6c757d; pointer-events: none; opacity: 0.9;
+      }
+      .ust-units .sep { padding: 0 2px; color: #555; }
+      .selectize-control.single .selectize-input,
+      .selectize-control.single .selectize-input.input-active {
+        min-height: calc(2.25rem + 2px); padding: .375rem .75rem; line-height: 1.5;
+      }
+      .selectize-control.single .selectize-input > input { height: 1.5rem; }
     "))
   ),
   

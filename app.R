@@ -461,30 +461,39 @@ ui <- page_fillable(
       card_header(
         fluidRow(
           column(4, "Data Entry"),
-          column(4, style = "text-align: center;",
-                 actionButton("reload", "Reload workbook", icon = icon("redo"))),
+          column(4),
           column(4)
         )
       ),
       card_body(
         fluidRow(
           column(
-            4,
+            3,
+            textOutput("notebook_path_display"),
+            tags$div(style = "height: 15px;"),
+            actionButton("reload", "Reload workbook", icon = icon("redo")),
+            tags$div(style = "height: 23px;"),
             h4("Product-Level Inputs"),
+            
             uiOutput("product_form_col1")),
-          column(4,
+          column(3,
                  uiOutput("product_form_col2")),
-          column(4,
-                 uiOutput("product_form_col3"))
+          column(3,
+                 uiOutput("product_form_col3")),
+          column(3,
+                 uiOutput("product_form_col4"))
         ),
         fluidRow(
-          column(4,
+          column(3,
                  h4("Scenario-Level Inputs"),
+                 tags$div(style = "height: 5px;"),
                  uiOutput("scenario_form_col1")),
-          column(4,
+          column(3,
                  uiOutput("scenario_form_col2")),
-          column(4,
-                 uiOutput("scenario_form_col3"))
+          column(3,
+                 uiOutput("scenario_form_col3")),
+          column(3,
+                 uiOutput("scenario_form_col4"))
         )
       ),
       card_footer(
@@ -502,9 +511,9 @@ ui <- page_fillable(
       class = "resizable-card",
       card_header(
         fluidRow(
-          column(4, "Data Display"),
-          column(4, style = "text-align: center;", 
-                 actionButton("toggle-resize-btn", label = icon("arrow-up"), class = "btn-link")),
+          column(4, "Data Display", actionButton("toggle-resize-btn", label = icon("arrow-up"), class = "btn-link")),
+          column(4),#, style = "text-align: center;", 
+                 #actionButton("toggle-resize-btn", label = icon("arrow-up"), class = "btn-link")),
           column(4, style = "text-align: right;")
         )
       ),
@@ -658,33 +667,40 @@ server <- function(input, output, session) {
     }
   }, once = TRUE)
   
-  # ----- Product form (3 columns) -----
+  # ----- Product form (4 columns) -----
   output$product_form_col1 <- renderUI({
     req(vocab())
     tagList(
-      make_input("EPA Registration Number", "text", prefix = "prod__"),
-      make_input("AI Name", "text", prefix = "prod__"),
-      make_input("PC Code", "text", prefix = "prod__")
-    )
+      make_input("EPA Registration Number", "text", prefix = "prod__")
+      )
   })
   output$product_form_col2 <- renderUI({
     req(vocab())
     tagList(
-      make_input("Co-Formulated AI", "text", prefix = "prod__"),
-      make_input("Physical Form", "pick", choices = vocab()[["Physical Form"]], prefix = "prod__", multiple = TRUE),
-      make_input("% AI", "text", prefix = "prod__")
+      make_input("AI Name", "text", prefix = "prod__"),
+      make_input("PC Code", "text", prefix = "prod__"),
+      make_input("Co-Formulated AI", "text", prefix = "prod__")
     )
   })
   output$product_form_col3 <- renderUI({
     req(vocab())
     tagList(
-      make_input("AI Concentration (Or Product Density if liquid)", "text", prefix = "prod__"),
+      make_input("Physical Form", "pick", choices = vocab()[["Physical Form"]], prefix = "prod__", multiple = TRUE),
+      make_input("% AI", "text", prefix = "prod__"),
+      make_input("AI Concentration (Or Product Density if liquid)", "text", prefix = "prod__")
+    )
+  })
+
+  output$product_form_col4 <- renderUI({
+    req(vocab())
+    tagList(
       make_input("RUP", "pick", choices = vocab()[["RUP"]], prefix = "prod__", multiple = FALSE),
       make_input("Product-level PPE", "pick", choices = vocab()[["Product-level PPE"]], prefix = "prod__", multiple = TRUE)
     )
   })
   
-  # ----- Scenario form (3 columns) -----
+    
+  # ----- Scenario form (6 columns) -----
   output$scenario_form_col1 <- renderUI({
     req(vocab())
     tagList(
@@ -701,18 +717,19 @@ server <- function(input, output, session) {
         default_num_unit  = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$num,
         default_area_unit = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$area,
         prefix = "scen__", allow_weight = FALSE, allow_volume = TRUE
-      ),
-      make_area_rate_input(
-        "Product Max App Rate/Area",
-        default_num_unit  = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$num,
-        default_area_unit = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$area,
-        prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
       )
+      
     )
   })
   output$scenario_form_col2 <- renderUI({
     req(vocab())
     tagList(
+      make_area_rate_input(
+        "Product Max App Rate/Area",
+        default_num_unit  = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$area,
+        prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
+      ),
       make_area_rate_input(
         "AI Max Rate/App",
         default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/App"]]$num,
@@ -744,21 +761,28 @@ server <- function(input, output, session) {
         default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$num,
         default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
-      ),
-      make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__"),
-      make_input("RTI (d)", "text", prefix = "scen__"),
-      make_input("REI (H)", "text", prefix = "scen__")
+      )
+      
     )
   })
   output$scenario_form_col3 <- renderUI({
     req(vocab())
     tagList(
+      make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__"),
+      make_input("RTI (d)", "text", prefix = "scen__"),
+      make_input("REI (H)", "text", prefix = "scen__"),
       make_input("PHI (d)", "text", prefix = "scen__"),
       make_input("PGI (d)", "text", prefix = "scen__"),
       make_input("PSI (d)", "text", prefix = "scen__"),
       make_input("ASABE Droplet Size", "pick", choices = vocab()[["ASABE Droplet Size"]], prefix = "scen__", multiple = TRUE),
       make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
-      make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE),
+      make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE)
+    )
+  })
+  
+  output$scenario_form_col4 <- renderUI({
+    req(vocab())
+    tagList(
       make_input("Pollinator Protection Statement", "pick", choices = vocab()[["Pollinator Protection Statement"]], prefix = "scen__", multiple = TRUE),
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
       make_input("Site-Level ALLOWED Geographic Area", "pick", choices = vocab()[["Site-Level ALLOWED Geographic Area"]], prefix = "scen__", multiple = TRUE),
@@ -768,6 +792,8 @@ server <- function(input, output, session) {
       textAreaInput(inputId = scenario_textarea_id, label = scenario_textarea_label, value = "", rows = 4, resize = "vertical", width = "100%")
     )
   })
+  
+  
   
   # ----- Validation -----
   iv <- shinyvalidate::InputValidator$new()
@@ -968,6 +994,15 @@ server <- function(input, output, session) {
     filename = function() paste0("entries_", Sys.Date(), ".csv"),
     content  = function(file) readr::write_csv(scen_dat(), file, na = "")
   )
+  
+  # - Notebook path display
+  observeEvent(workbook_path, {
+    # Update the notebook path in the UI
+    output$notebook_path_display <- renderText({
+      paste("Notebook loaded from:", workbook_path)
+    })
+  })
+  
   
   # ---- Unified Clear form ----
   observeEvent(input$clear_all, {

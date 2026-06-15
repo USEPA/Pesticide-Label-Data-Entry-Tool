@@ -22,7 +22,7 @@ library(DT)
 
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
-
+workbook_name<-"UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
 # Define the bslib theme if you want to apply one
 theme <- bs_theme(version = 5)
 
@@ -296,95 +296,7 @@ my_theme <- bs_theme(
     "}"
   ))
 
-# ui <- page_fillable(
-#   theme = my_theme,
-#   tags$head(
-#     tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png"),
-#     tags$style(HTML("
-#       .bslib-full-screen-enter {
-#         bottom: auto !important;
-#         top: 1px !important;
-#         right: 1px !important;
-#         width: 28px !important;
-#         height: 28px !important;
-#         min-width: 28px !important;
-#         min-height: 28px !important;
-#         padding: 0 !important;
-#         display: inline-flex !important;
-#         align-items: center !important;
-#         justify-content: center !important;
-#         border-radius: 50% !important;
-#         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-#       }
-#       .bslib-full-screen-enter svg {
-#         transform: scale(0.75) !important;
-#       }
-#     "))
-#   ),
-# 
-#   layout_columns(
-#     col_widths=12,
-#     gap="2px",
-# 
-# 
-#     card(
-#       full_screen=TRUE,
-#       height="70vh",
-#       card_header("Data Entry"),
-# card_body(
-#       layout_sidebar(
-#         fill = FALSE,
-#         sidebar = sidebar(
-#           h4("Data Entry"),
-#           actionButton("reload", "Reload workbook", icon = icon("redo")),
-#           actionButton("clear_all", "Clear form", icon = icon("eraser")),
-#           actionButton("add_entry", "Add row", class = "btn-primary", icon = icon("plus"))
-#         ),
-# 
-#         fluidRow(
-#           column(
-#             4,
-#             h4("Product-Level Inputs"),
-#             uiOutput("product_form_col1")),
-#           column(4,
-#                  uiOutput("product_form_col2")),
-#           column(4,
-#                  uiOutput("product_form_col3"))
-#         ),
-#         fluidRow(
-#           column(4,
-#                  h4("Scenario-Level Inputs"),
-#                  uiOutput("scenario_form_col1")),
-#           column(4,
-#                  uiOutput("scenario_form_col2")),
-#           column(4,
-#                  uiOutput("scenario_form_col3"))
-#         )
-#       )
-# )
-#     ),
-#     card(
-#       full_screen=TRUE,
-#       height="30vh",
-#       card_header("Data Display"),
-# card_body(
-#       layout_sidebar(
-#         fill = FALSE,
-#         sidebar = sidebar(
-#           h4("Data Display Options"),
-#           actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt")),
-#           actionButton("dup_scen", "Duplicate selected", icon = icon("copy")),
-#           actionButton("del_scen", "Delete selected", icon = icon("remove")),
-#           hr(),
-#           downloadButton("dl_scen", "Download CSV"),
-#           actionButton("upload_scen", "Upload CSV", icon= icon("upload"), class = "btn-secondary ms-2")
-#         ),
-#         DTOutput("tbl_scen")
-#       )
-#     )
-# )
-#   )
-# )
+
 
 ui <- page_fillable(
   theme = my_theme,
@@ -456,7 +368,7 @@ ui <- page_fillable(
     
     card(
       full_screen=TRUE,
-      height="70vh",
+      height="65vh",
       class = "resizable-card",
       card_header(
         fluidRow(
@@ -471,7 +383,7 @@ ui <- page_fillable(
             3,
             textOutput("notebook_path_display"),
             tags$div(style = "height: 15px;"),
-            actionButton("reload", "Reload workbook", icon = icon("redo")),
+            actionButton("reload", "Reload workbook", class="btn-sm",icon = icon("redo")),
             tags$div(style = "height: 23px;"),
             h4("Product-Level Inputs"),
             
@@ -498,16 +410,16 @@ ui <- page_fillable(
       ),
       card_footer(
         fluidRow(
-          column(4, actionButton("add_entry", "Add row", class = "btn-primary", icon = icon("plus"))),
+          column(4, actionButton("add_entry", "Add row", class = "btn-sm btn-primary", icon = icon("plus"))),
           column(4),
           column(4, style = "text-align: right;", 
-                 actionButton("clear_all", "Clear form", icon = icon("eraser")))
+                 actionButton("clear_all", "Clear form", class = "btn-sm", icon = icon("eraser")))
         )
       )
     ),
     card(
       full_screen=TRUE,
-      height="30vh",
+      height="35vh",
       class = "resizable-card",
       card_header(
         fluidRow(
@@ -518,18 +430,18 @@ ui <- page_fillable(
         )
       ),
       card_body(
-        DTOutput("tbl_scen")
+        div(DTOutput("tbl_scen"), style = "font-size: 85%;")
       ),
       card_footer(
         fluidRow(
           column(4,
-                 downloadButton("dl_scen", "Download CSV"),
-                 actionButton("upload_scen", "Upload CSV", icon = icon("upload"), class = "btn-secondary")),
+                 downloadButton("dl_scen", "Download CSV",class = "btn-sm"),
+                 actionButton("upload_scen", "Upload CSV", icon = icon("upload"), class = "btn-sm btn-secondary")),
           column(4, style = "text-align: center;",
-                 actionButton("clone_to_form", "Load selected to form", icon = icon("sign-in-alt")),
-                 actionButton("dup_scen", "Duplicate selected", icon = icon("copy"))),
+                 actionButton("clone_to_form", "Load selected to form", class = "btn-sm",icon = icon("sign-in-alt")),
+                 actionButton("dup_scen", "Duplicate selected", class = "btn-sm",icon = icon("copy"))),
           column(4, style = "text-align: right;",
-                 actionButton("del_scen", "Delete selected", icon = icon("remove")))
+                 actionButton("del_scen", "Delete selected", class = "btn-sm", icon = icon("remove")))
         )
       )
     )
@@ -542,14 +454,14 @@ ui <- page_fillable(
       var card2 = document.querySelectorAll('.resizable-card')[1];
       var buttonIcon = document.querySelector('#toggle-resize-btn i');
 
-      if (card1.style.height !== '20vh') { // Check if it's not already in minimized state
-        card1.style.height = '20vh'; // small size for Data Entry
-        card2.style.height = '80vh'; // large size for Data Display
+      if (card1.style.height !== '15vh') { // Check if it's not already in minimized state
+        card1.style.height = '15vh'; // small size for Data Entry
+        card2.style.height = '85vh'; // large size for Data Display
         buttonIcon.classList.remove('fa-arrow-up'); // Change icon to down arrow
         buttonIcon.classList.add('fa-arrow-down');
       } else {
-        card1.style.height = '70vh'; // revert to original size for Data Entry
-        card2.style.height = '30vh'; // revert to original size for Data Display
+        card1.style.height = '65vh'; // revert to original size for Data Entry
+        card2.style.height = '35vh'; // revert to original size for Data Display
         buttonIcon.classList.remove('fa-arrow-down'); // Change icon to up arrow
         buttonIcon.classList.add('fa-arrow-up');
       }
@@ -999,7 +911,7 @@ server <- function(input, output, session) {
   observeEvent(workbook_path, {
     # Update the notebook path in the UI
     output$notebook_path_display <- renderText({
-      paste("Notebook loaded from:", workbook_path)
+      paste("Notebook loaded:", workbook_name,sep="\n")
     })
   })
   

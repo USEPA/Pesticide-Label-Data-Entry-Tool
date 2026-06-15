@@ -471,6 +471,7 @@ ui <- page_fillable(
 # ---------------- Server ----------------
 server <- function(input, output, session) {
   vocab <- reactiveVal(NULL)
+  upload_buffer <- reactiveVal(NULL)
   
   # Empty schema: table stores BOTH product + scenario fields (no Product_ID)
   make_empty_scen <- function() {
@@ -494,68 +495,83 @@ server <- function(input, output, session) {
   }
   
   observeEvent(input$upload_scen, {
+    upload_buffer(NULL)  # clear any previous buffer
     showModal(modalDialog(
-      fileInput("file_upload_scenario", "Choose CSV File",
-                accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")),
-      footer = tagList(modalButton("Cancel"),
-                       actionButton("confirm_upload_scenario", "Upload", class = "btn-primary")),
-      easyClose = FALSE, size = "m", title = "Upload to Table"
+      fileInput(
+        "file_upload_scenario",
+        "Choose CSV File",
+        accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")
+      ),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_upload_scenario", "Upload", class = "btn-primary")
+      ),
+      easyClose = FALSE,
+      size = "m",
+      title = "Upload to Table"
     ))
+  })
     
-    observeEvent(input$confirm_upload_scenario, {
-      removeModal()
-      if (is.null(input$file_upload_scenario)) {
-        showNotification("No file selected.", type = "error")
-        return()
-      }
+  observeEvent(input$confirm_upload_scenario, {
+    req(input$file_upload_scenario)
+    removeModal()
+    
+    expected_labels <- c(product_fields, scenario_fields, scenario_textarea_label)
+    
+    # Read as all-character
+    data <- tryCatch({
+      readr::read_csv(
+        input$file_upload_scenario$datapath,
+        col_types = readr::cols(.default = readr::col_character()),
+        show_col_types = FALSE, progress = FALSE
+      )
+    }, error = function(e) NULL)
+    
+    if (is.null(data)) {
+      showNotification("Failed to read file.", type = "error")
+      return()
+    }
+    
+    # Header validation using idsafe
+    expected_fields <- purrr::map_chr(expected_labels, idsafe)
+    uploaded_fields <- purrr::map_chr(names(data), idsafe)
+    if (!all(expected_fields %in% uploaded_fields)) {
+      showNotification("File format does not match expected fields. It should contain all required columns.",
+                       type = "error")
+      return()
+    }
+    
+    # Coerce to expected schema
+    data <- ensure_expected_columns(data, expected_labels)
+    upload_buffer(data)
+    
+    showModal(modalDialog(
+      title = "File Uploaded Successfully",
+      selectInput("upload_mode_scen", "Choose an option:", choices = c("Append", "Replace")),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("commit_upload_scen", "Commit Changes", class = "btn-success")
+      ),
+      easyClose = FALSE
+    ))
+  })
       
-      # Recommended: read all as character using readr
-      data <- tryCatch({
-        readr::read_csv(
-          input$file_upload_scenario$datapath,
-          col_types = readr::cols(.default = readr::col_character()),
-          show_col_types = FALSE, progress = FALSE
-        )
-      }, error = function(e) {
-        showNotification("Failed to read file.", type = "error")
-        return(NULL)
-      })
-      if (is.null(data)) return()
-      
-      # Validate required columns (using idsafe for comparison)
-      expected_labels <- c(product_fields, scenario_fields, scenario_textarea_label)
-      expected_fields <- purrr::map_chr(expected_labels, idsafe)
-      uploaded_fields <- purrr::map_chr(names(data), idsafe)
-      if (!all(expected_fields %in% uploaded_fields)) {
-        showNotification("File format does not match expected fields. It should contain all required columns.",
-                         type = "error")
-        return()
-      }
-      
-      # Coerce uploaded data to expected schema (all character, correct order)
-      data <- ensure_expected_columns(data, expected_labels)
-      
-      showModal(modalDialog(
-        title = "File Uploaded Successfully",
-        selectInput("upload_mode_scen", "Choose an option:", choices = c("Append", "Replace")),
-        footer = tagList(modalButton("Cancel"),
-                         actionButton("commit_upload_scen", "Commit Changes", class = "btn-success")),
-        easyClose = FALSE
-      ))
-      
-      observeEvent(input$commit_upload_scen, {
-        if (input$upload_mode_scen == "Append") {
-          # Also coerce existing data to the same schema, just in case
-          existing <- ensure_expected_columns(scen_dat(), expected_labels)
-          merged_data <- dplyr::bind_rows(existing, data) %>% dplyr::distinct()
-          scen_dat(merged_data)
-        } else {
-          scen_dat(data)
-        }
-        removeModal()
-        showNotification("Data uploaded successfully.", type = "message")
-      })
-    })
+  observeEvent(input$commit_upload_scen, {
+    req(upload_buffer())
+    expected_labels <- c(product_fields, scenario_fields, scenario_textarea_label)
+    
+    data <- ensure_expected_columns(upload_buffer(), expected_labels)
+    upload_buffer(NULL)
+    
+    if (identical(input$upload_mode_scen, "Append")) {
+      existing <- ensure_expected_columns(scen_dat(), expected_labels)
+      scen_dat(dplyr::bind_rows(existing, data) |> dplyr::distinct())
+    } else {
+      scen_dat(data)
+    }
+    
+    removeModal()
+    showNotification("Data uploaded successfully.", type = "message")
   })
   
   # ---------- Load vocab

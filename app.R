@@ -558,7 +558,7 @@ server <- function(input, output, session) {
     })
   })
   
-  # Load vocab
+  # ---------- Load vocab
   observe({
     validate(need(file.exists(workbook_path),
                   paste("Workbook not found. Check path:\n", workbook_path)))

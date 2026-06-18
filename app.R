@@ -372,19 +372,23 @@ ui <- page_fillable(
       class = "resizable-card",
       card_header(
         fluidRow(
-          column(4, "Data Entry"),
-          column(4),
-          column(4)
+          column(3, tags$strong("UST Data Entry Tool")),
+          column(6, tags$strong("Template:", style = "display: inline;"),
+                 uiOutput("notebook_path_display", inline = TRUE)),
+          column(3, tags$a(
+            href = "https://raw.githubusercontent.com/USEPA/Pesticide-Label-Data-Entry-Tool/b038618438ccdce0b10ded98b413e85001de6611/data/templates/UST_Active%20Ingredient%20(PC%20Code)%20UST%20Report_Template_active.xlsx",
+            #href = "https://github.com/USEPA/Pesticide-Label-Data-Entry-Tool/blob/b038618438ccdce0b10ded98b413e85001de6611/data/templates/UST_Active%20Ingredient%20(PC%20Code)%20UST%20Report_Template_active.xlsx",  # Replace with actual URL
+            "UST Template File: Term definitions",  # This is the text that users will see and click on
+            target = "_blank"
+          )),
+          #column(3)
         )
       ),
       card_body(
         fluidRow(
           column(
             3,
-            textOutput("notebook_path_display"),
-            tags$div(style = "height: 15px;"),
-            actionButton("reload", "Reload workbook", class="btn-sm",icon = icon("redo")),
-            tags$div(style = "height: 23px;"),
+            #actionButton("reload", "Reload workbook", class="btn-sm",icon = icon("redo")),
             h4("Product-Level Inputs"),
             
             uiOutput("product_form_col1")),
@@ -926,8 +930,8 @@ server <- function(input, output, session) {
   # - Notebook path display
   observeEvent(workbook_path, {
     # Update the notebook path in the UI
-    output$notebook_path_display <- renderText({
-      paste("Notebook loaded:", workbook_name,sep="\n")
+    output$notebook_path_display <- renderUI({
+      tags$span(workbook_name)
     })
   })
   

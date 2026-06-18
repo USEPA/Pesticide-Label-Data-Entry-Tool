@@ -378,7 +378,7 @@ ui <- page_fillable(
           column(3, tags$a(
             href = "https://raw.githubusercontent.com/USEPA/Pesticide-Label-Data-Entry-Tool/b038618438ccdce0b10ded98b413e85001de6611/data/templates/UST_Active%20Ingredient%20(PC%20Code)%20UST%20Report_Template_active.xlsx",
             #href = "https://github.com/USEPA/Pesticide-Label-Data-Entry-Tool/blob/b038618438ccdce0b10ded98b413e85001de6611/data/templates/UST_Active%20Ingredient%20(PC%20Code)%20UST%20Report_Template_active.xlsx",  # Replace with actual URL
-            "UST Template File: Term definitions",  # This is the text that users will see and click on
+            "Template File: For reference and definitions",  # This is the text that users will see and click on
             target = "_blank"
           )),
           #column(3)

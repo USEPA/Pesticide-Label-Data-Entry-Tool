@@ -458,9 +458,9 @@ ui <- page_fillable(
       var card2 = document.querySelectorAll('.resizable-card')[1];
       var buttonIcon = document.querySelector('#toggle-resize-btn i');
 
-      if (card1.style.height !== '15vh') { // Check if it's not already in minimized state
-        card1.style.height = '15vh'; // small size for Data Entry
-        card2.style.height = '85vh'; // large size for Data Display
+      if (card1.style.height !== '35vh') { // Check if it's not already in minimized state
+        card1.style.height = '35vh'; // small size for Data Entry
+        card2.style.height = '65vh'; // large size for Data Display
         buttonIcon.classList.remove('fa-arrow-up'); // Change icon to down arrow
         buttonIcon.classList.add('fa-arrow-down');
       } else {

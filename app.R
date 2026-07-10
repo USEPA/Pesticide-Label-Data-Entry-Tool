@@ -237,7 +237,7 @@ scenario_fields <- c(
   "AI Max Rate/App","Max # App/Year","Max # App/Crop Cycle",
   "Product Max Rate/Year","Product Max Rate/Crop Cycle",
   "AI Max Rate/Year","AI Max Rate/Crop Cycle",
-  "Max Number of Seasons/Crop Cycles per year","RTI (days)","REI (Hours)","PHI (days)","PGI (days)","PSI (days)",
+  "Max Number of Seasons/Crop Cycles per year","RTI (days)","REI (hours)","PHI (days)","PGI (days)","PSI (days)",
   "ASABE Droplet Size","Max Release Height (ft)","Max Wind Speed (mph)",
   "Buffered Area (ft)","Buffered Area (Term)",
   "Site-Level ALLOWED Geographic Area","Site-Level PROHIBITED Geographic Area",
@@ -703,7 +703,7 @@ server <- function(input, output, session) {
     tagList(
       make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__"),
       make_input("RTI (days)", "text", prefix = "scen__"),
-      make_input("REI (Hours)", "text", prefix = "scen__"),
+      make_input("REI (hours)", "text", prefix = "scen__"),
       make_input("PHI (days)", "text", prefix = "scen__"),
       make_input("PGI (days)", "text", prefix = "scen__"),
       make_input("PSI (days)", "text", prefix = "scen__"),
@@ -964,7 +964,7 @@ server <- function(input, output, session) {
     scenario_text_fields <- c(
       "Max # App/Year", "Max # App/Crop Cycle",
       "Max Number of Seasons/Crop Cycles per year",
-      "RTI (days)", "REI (Hours)", "PHI (days)", "PGI (days)", "PSI (days)",
+      "RTI (days)", "REI (hours)", "PHI (days)", "PGI (days)", "PSI (days)",
       "Max Release Height (ft)", "Max Wind Speed (mph)"
     )
     lapply(scenario_text_fields, function(field) {

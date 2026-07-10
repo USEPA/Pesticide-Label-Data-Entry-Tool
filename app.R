@@ -90,6 +90,7 @@ build_vocab <- function(path) {
     "App Target"                      = read_vocab_col(path, "App. Target", "Label"),
     "App Type"                        = read_vocab_col(path, "App. Type", "Label"),
     "App Equipment Type"              = read_vocab_range(path, "App. Equipment", "G2:G8"),
+    "Specific App Equipment"          = read_vocab_col(path, "App. Equipment", "Specific Application Equipment"),
     "App Timing (Site)"               = read_vocab_col(path, "App Timing (Site Status)", "Label"),
     "App Timing (Pest)"               = read_vocab_col(path, "App Timing (Pest)", "Label"),
     "ASABE Droplet Size"              = read_vocab_col(path, "ASABE Droplet Size", "Label"),
@@ -229,7 +230,7 @@ product_fields <- c(
 
 scenario_fields <- c(
   "Crop Use Site","Non Crop Use Site",
-  "Location","App Target","App Type","App Equipment Type",
+  "Location","App Target","App Type","App Equipment Type","Specific App Equipment",
   "App Timing (Site)","App Timing (Pest)",
   "Min Diluent Quantity (Gal Spray Soln per Acre)",
   "Product Max App Rate/Area",
@@ -246,7 +247,7 @@ scenario_fields <- c(
 
 scenario_picklist_fields <- c(
   "Crop Use Site","Non Crop Use Site",
-  "Location","App Target","App Type","App Equipment Type",
+  "Location","App Target","App Type","App Equipment Type","Specific App Equipment",
   "App Timing (Site)","App Timing (Pest)",
   "ASABE Droplet Size","Buffered Area (Term)",
   "Pollinator Protection Statement","Soil Type Restrictions",
@@ -642,6 +643,7 @@ server <- function(input, output, session) {
       make_input("App Target", "pick", choices = vocab()[["App Target"]], prefix = "scen__", multiple = TRUE),
       make_input("App Type", "pick", choices = vocab()[["App Type"]], prefix = "scen__", multiple = TRUE),
       make_input("App Equipment Type", "pick", choices = vocab()[["App Equipment Type"]], prefix = "scen__", multiple = TRUE),
+      make_input("Specific App Equipment", "pick", choices = vocab()[["Specific App Equipment"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Site)", "pick", choices = vocab()[["App Timing (Site)"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Pest)", "pick", choices = vocab()[["App Timing (Pest)"]], prefix = "scen__", multiple = TRUE),
       make_area_rate_input(
@@ -966,8 +968,8 @@ server <- function(input, output, session) {
     # Scenario picklists
     scenario_select_fields <- c(
       "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
-      "App Type", "App Equipment Type", "App Timing (Site)",
-      "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
+      "App Type", "App Equipment Type", "Specific App Equipment", 
+      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
       "Pollinator Protection Statement", "Soil Type Restrictions",
       "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area"
     )

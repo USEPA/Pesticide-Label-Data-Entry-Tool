@@ -21,8 +21,8 @@ library(DT)
 #rsconnect::writeManifest()
 
 # ---------------- CONFIG ----------------
-workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
-workbook_name<-"UST_Active Ingredient (PC Code) UST Report_Template_2.2026.xlsx"
+workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_active.xlsx"
+workbook_name<-"UST_Active Ingredient (PC Code) UST Report_Template_active.xlsx"
 # Define the bslib theme if you want to apply one
 theme <- bs_theme(version = 5)
 

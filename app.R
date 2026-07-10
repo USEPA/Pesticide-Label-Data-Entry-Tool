@@ -103,7 +103,7 @@ build_vocab <- function(path) {
 }
 
 # ---------------- Input builders ----------------
-make_input <- function(field_label, type = c("text","numeric","pick"), choices = NULL, prefix = "", multiple = FALSE) {
+make_input <- function(field_label, type = c("text","numeric","pick"), choices = NULL, prefix = "", multiple = FALSE, placeholder = "Type or pick…") {
   type <- match.arg(type)
   input_id <- paste0(prefix, idsafe(field_label))
   if (type == "pick") {
@@ -113,7 +113,7 @@ make_input <- function(field_label, type = c("text","numeric","pick"), choices =
       multiple = multiple,
       options = list(
         create = TRUE,
-        placeholder = "Type or pick…",
+        placeholder = placeholder, #<-now customizable
         openOnFocus = TRUE,
         maxOptions = 10000,
         dropdownParent = "body",
@@ -130,17 +130,17 @@ make_input <- function(field_label, type = c("text","numeric","pick"), choices =
 
 # ---------- Unit choices ----------
 weight_units <- c("lb", "oz", "kg", "g")
-volume_units <- c("gal", "qt", "L", "mL", "fl oz")
-area_units   <- c("ac", "ha")
+volume_units <- c("gal", "qt", "L", "mL", "fl oz", "mg %", "ppm", "ppb")
+area_units   <- c("ac", "ha", "seed", "animal", "kg", "CWT", "feet (linear)","linear feet of depth", "sanitizer no area needed", "target concentration no area needed")
 
 scenario_area_rate_allowed <- list(
   "Min Diluent Quantity (Gal Spray Soln per Acre)" = list(allow_weight = FALSE, allow_volume = TRUE),
-  "Product Max App Rate/Area"                      = list(allow_weight = TRUE,  allow_volume = TRUE),
+  "Product Max Rate/App"                      = list(allow_weight = TRUE,  allow_volume = TRUE),
   "AI Max Rate/App"                                = list(allow_weight = TRUE,  allow_volume = FALSE),
   "Product Max Rate/Year"                          = list(allow_weight = TRUE,  allow_volume = TRUE),
   "Product Max Rate/Crop Cycle"                    = list(allow_weight = TRUE,  allow_volume = TRUE),
   "AI Max Rate/Year"                               = list(allow_weight = TRUE,  allow_volume = FALSE),
-  "AI Max Rate/Cycle"                              = list(allow_weight = TRUE,  allow_volume = FALSE)
+  "AI Max Rate/Crop Cycle"                              = list(allow_weight = TRUE,  allow_volume = FALSE)
 )
 
 unit_choices_for_field <- function(field) {
@@ -223,7 +223,7 @@ product_fields <- c(
   "Co-Formulated AI",
   "Physical Form",
   "% AI",
-  "AI Concentration (Or Product Density if liquid)",
+  "AI Concentration",
   "RUP",
   "Product-level PPE"
 )
@@ -233,12 +233,12 @@ scenario_fields <- c(
   "Location","App Target","App Type","App Equipment Type","Specific App Equipment",
   "App Timing (Site)","App Timing (Pest)",
   "Min Diluent Quantity (Gal Spray Soln per Acre)",
-  "Product Max App Rate/Area",
+  "Product Max Rate/App",
   "AI Max Rate/App","Max # App/Year","Max # App/Crop Cycle",
   "Product Max Rate/Year","Product Max Rate/Crop Cycle",
-  "AI Max Rate/Year","AI Max Rate/Cycle",
-  "Max Number of Seasons/Crop Cycles per year","RTI (d)","REI (H)","PHI (d)","PGI (d)","PSI (d)",
-  "ASABE Droplet Size","Max Release Height","Max Wind Speed (mph)",
+  "AI Max Rate/Year","AI Max Rate/Crop Cycle",
+  "Max Number of Seasons/Crop Cycles per year","RTI (days)","REI (Hours)","PHI (days)","PGI (days)","PSI (days)",
+  "ASABE Droplet Size","Max Release Height (ft)","Max Wind Speed (mph)",
   "Buffered Area (ft)","Buffered Area (Term)",
   "Site-Level ALLOWED Geographic Area","Site-Level PROHIBITED Geographic Area",
   "Soil Type Restrictions",
@@ -258,7 +258,7 @@ scenario_numeric_fields <- c("Buffered Area (ft)")
 
 scenario_area_rate_fields <- c(
   "Min Diluent Quantity (Gal Spray Soln per Acre)",
-  "Product Max App Rate/Area",
+  "Product Max Rate/App",
   "AI Max Rate/App",
   "Product Max Rate/Year",
   "Product Max Rate/Crop Cycle",
@@ -268,7 +268,7 @@ scenario_area_rate_fields <- c(
 
 scenario_area_rate_defaults <- list(
   "Min Diluent Quantity (Gal Spray Soln per Acre)" = list(num = "gal",   area = "ac"),
-  "Product Max App Rate/Area"                      = list(num = "gal",   area = "ac"),
+  "Product Max Rate/App"                      = list(num = "gal",   area = "ac"),
   "AI Max Rate/App"                                = list(num = "lb",    area = "ac"),
   "Product Max Rate/Year"                          = list(num = "fl oz", area = "ac"),
   "Product Max Rate/Crop Cycle"                    = list(num = "fl oz", area = "ac"),
@@ -611,7 +611,7 @@ server <- function(input, output, session) {
     tagList(
       make_input("AI Name", "text", prefix = "prod__"),
       make_input("PC Code", "text", prefix = "prod__"),
-      make_input("Co-Formulated AI", "text", prefix = "prod__")
+      make_input("Co-Formulated AI", "pick", choices = NULL, prefix = "prod__", multiple = TRUE, placeholder = "Type each AI name and press enter")
     )
   })
   output$product_form_col3 <- renderUI({
@@ -619,7 +619,7 @@ server <- function(input, output, session) {
     tagList(
       make_input("Physical Form", "pick", choices = vocab()[["Physical Form"]], prefix = "prod__", multiple = TRUE),
       make_input("% AI", "text", prefix = "prod__"),
-      make_input("AI Concentration (Or Product Density if liquid)", "text", prefix = "prod__")
+      make_input("AI Concentration (i.e. product density if liquid)", "text", prefix = "prod__")
     )
   })
 
@@ -644,7 +644,7 @@ server <- function(input, output, session) {
       make_input("App Equipment Type", "pick", choices = vocab()[["App Equipment Type"]], prefix = "scen__", multiple = TRUE),
       make_input("Specific App Equipment", "pick", choices = vocab()[["Specific App Equipment"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Site)", "pick", choices = vocab()[["App Timing (Site)"]], prefix = "scen__", multiple = TRUE),
-      make_input("App Timing (Pest)", "pick", choices = vocab()[["App Timing (Pest)"]], prefix = "scen__", multiple = TRUE),
+      make_input("App Timing (Pest)", "pick", choices = vocab()[["App Timing (Pest)"]], prefix = "scen__", multiple = TRUE, placeholder = "Use only if all crop stages is selected in app timing (site) field"),
       make_area_rate_input(
         "Min Diluent Quantity (Gal Spray Soln per Acre)",
         default_num_unit  = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$num,
@@ -658,9 +658,9 @@ server <- function(input, output, session) {
     req(vocab())
     tagList(
       make_area_rate_input(
-        "Product Max App Rate/Area",
-        default_num_unit  = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$num,
-        default_area_unit = scenario_area_rate_defaults[["Product Max App Rate/Area"]]$area,
+        "Product Max Rate/App",
+        default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/App"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["Product Max Rate/App"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
       ),
       make_area_rate_input(
@@ -702,11 +702,11 @@ server <- function(input, output, session) {
     req(vocab())
     tagList(
       make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__"),
-      make_input("RTI (d)", "text", prefix = "scen__"),
-      make_input("REI (H)", "text", prefix = "scen__"),
-      make_input("PHI (d)", "text", prefix = "scen__"),
-      make_input("PGI (d)", "text", prefix = "scen__"),
-      make_input("PSI (d)", "text", prefix = "scen__"),
+      make_input("RTI (days)", "text", prefix = "scen__"),
+      make_input("REI (Hours)", "text", prefix = "scen__"),
+      make_input("PHI (days)", "text", prefix = "scen__"),
+      make_input("PGI (days)", "text", prefix = "scen__"),
+      make_input("PSI (days)", "text", prefix = "scen__"),
       make_input("ASABE Droplet Size", "pick", choices = vocab()[["ASABE Droplet Size"]], prefix = "scen__", multiple = TRUE),
       make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
       make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE)
@@ -863,6 +863,12 @@ server <- function(input, output, session) {
       val <- row[[nm]][1] %||% ""
       if (nm %in% c("Physical Form", "Product-level PPE")) {
         try(updateSelectizeInput(session, id, selected = split_multi(val)), silent = TRUE)
+        
+      } else if (nm == "Co-Formulated AI") {
+        # Free-text multi-select: ensure selected values exist in choices
+        vals <- split_multi(val)
+        try(updateSelectizeInput(session, id, choices = unique(vals), selected = vals), silent = TRUE)
+        
       } else if (nm == "RUP") {
         try(updateSelectizeInput(session, id, selected = if (nzchar(val)) val else NULL), silent = TRUE)
       } else {
@@ -942,8 +948,8 @@ server <- function(input, output, session) {
     # Product
     product_text_fields <- c(
       "EPA Registration Number","PC Code","AI Name",
-      "Co-Formulated AI","% AI",
-      "AI Concentration (Or Product Density if liquid)"
+      "% AI",
+      "AI Concentration (i.e. Product Density if liquid)"
     )
     lapply(product_text_fields, function(field) {
       id <- paste0("prod__", idsafe(field))
@@ -951,14 +957,15 @@ server <- function(input, output, session) {
     })
     updateSelectizeInput(session, "prod__Physical_Form", selected = character(0))
     updateSelectizeInput(session, "prod__Product_level_PPE", selected = character(0))
+    updateSelectizeInput(session, "prod__Co_Formulated_AI", selected = character(0))
     updateSelectizeInput(session, "prod__RUP", selected = NULL)
     
     # Scenario texts
     scenario_text_fields <- c(
       "Max # App/Year", "Max # App/Crop Cycle",
       "Max Number of Seasons/Crop Cycles per year",
-      "RTI (d)", "REI (H)", "PHI (d)", "PGI (d)", "PSI (d)",
-      "Max Release Height", "Max Wind Speed (mph)"
+      "RTI (days)", "REI (Hours)", "PHI (days)", "PGI (days)", "PSI (days)",
+      "Max Release Height (ft)", "Max Wind Speed (mph)"
     )
     lapply(scenario_text_fields, function(field) {
       id <- paste0("scen__", idsafe(field))

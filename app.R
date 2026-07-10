@@ -377,8 +377,7 @@ ui <- page_fillable(
           column(6, tags$strong("Template:", style = "display: inline;"),
                  uiOutput("notebook_path_display", inline = TRUE)),
           column(3, tags$a(
-            href = "https://raw.githubusercontent.com/USEPA/Pesticide-Label-Data-Entry-Tool/b038618438ccdce0b10ded98b413e85001de6611/data/templates/UST_Active%20Ingredient%20(PC%20Code)%20UST%20Report_Template_active.xlsx",
-            #href = "https://github.com/USEPA/Pesticide-Label-Data-Entry-Tool/blob/b038618438ccdce0b10ded98b413e85001de6611/data/templates/UST_Active%20Ingredient%20(PC%20Code)%20UST%20Report_Template_active.xlsx",  # Replace with actual URL
+            href = "https://github.com/USEPA/Pesticide-Label-Data-Entry-Tool/blob/main/data/templates/UST_Active%20Ingredient%20(PC%20Code)%20UST%20Report_Template_active.xlsx",
             "Template File: For reference and definitions",  # This is the text that users will see and click on
             target = "_blank"
           )),

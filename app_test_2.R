@@ -436,7 +436,7 @@ ui <- page_fillable(
                  downloadButton("dl_scen", "Download CSV", class = "btn-sm"),
                  actionButton("upload_scen", "Upload CSV", icon = icon("upload"), class = "btn-sm btn-secondary")),
           column(4, style = "text-align: center;",
-                 actionButton("clone_to_form", "Load selected to Data Entry", class = "btn-sm", icon = icon("sign-in-alt")),
+                 actionButton("clone_to_form", "Load selected to form", class = "btn-sm", icon = icon("sign-in-alt")),
                  actionButton("dup_scen", "Duplicate selected", class = "btn-sm", icon = icon("copy"))),
           column(4, style = "text-align: right;",
                  actionButton("del_scen", "Delete selected", class = "btn-sm", icon = icon("remove")))

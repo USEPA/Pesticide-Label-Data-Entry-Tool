@@ -292,55 +292,88 @@ ui <- page_fillable(
   tags$head(
     tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png"),
     tags$style(HTML("
-      .bslib-full-screen-enter {
-        bottom: auto !important;
-        top: 1px !important;
-        right: 1px !important;
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
-        padding: 0 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 50% !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-      }
-      .bslib-full-screen-enter svg {
-        transform: scale(0.75) !important;
-      }
-      .resizable-card {
-        transition: height 0.3s ease;
-      }
-      .horizontal-resize-card, .vertical-resize-card {
-        transition: width 0.3s ease, height 0.3s ease; /* Ensure smooth transition */
-      }
-      #horizontal-resize-btn, #vertical-resize-btn {
-        cursor: pointer;
-        background-color: transparent;
-        border: none;
-        font-size: 1.2em;
-        padding: 5px;
-        color: gray;
-      }
-     .sub-card {
+ .bslib-full-screen-enter {
+      bottom: auto !important;
+      top: 1px !important;
+      right: 1px !important;
+      width: 28px !important;
+      height: 28px !important;
+      min-width: 28px !important;
+      min-height: 28px !important;
+      padding: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 50% !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    .bslib-full-screen-enter svg {
+      transform: scale(0.75) !important;
+    }
+    .resizable-card {
+      transition: height 0.3s ease;
+    }
+    .horizontal-resize-card, .vertical-resize-card {
+      transition: width 0.3s ease, height 0.3s ease; /* Ensure smooth transition */
+    }
+    #horizontal-resize-btn, #vertical-resize-btn {
+      cursor: pointer;
+      background-color: transparent;
+      border: none;
+      font-size: 1.2em;
+      padding: 5px;
+      color: gray;
+    }
+    .sub-card {
       border: none; /* Removes border around the entire sub-card if needed */
     }
-
     .sub-card .card-header {
       border-bottom: 1px solid white; /* Changes the header-bottom border to white */
     }
-
     .sub-card .card-body {
       border-top: 1px solid white; /* Ensures body-top border is white to match header */
     }
-
     /* If using borders inside card-body regions */
     .sub-card .card-footer {
       border-top: 1px solid white; /* Change footer-top border to match */
     }
-    "))
+    .ust-rate-row { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      flex-wrap: nowrap; 
+    }
+    .ust-rate-row .ust-numeric { 
+      flex: 1 1 auto; 
+      min-width: 70px; 
+    }
+    .ust-rate-row .ust-units { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      flex: 0 0 auto; 
+      white-space: nowrap; 
+    }
+    .ust-units .shiny-input-container { 
+      width: auto !important; 
+      display: inline-block; 
+    }
+    .ust-units .ust-unit .selectize-control { 
+      width: auto !important; 
+      min-width: 75px; /* Ensure dropdowns remain visible */
+    }
+    .ust-units .ust-unit:first-of-type .selectize-control { 
+      min-width: 50px; 
+    }
+    .ust-units .ust-unit:last-of-type .selectize-control { 
+      min-width: 50px; 
+    }
+    .selectize-control.single .selectize-input:after {
+      top: auto !important;
+      bottom: 3px !important;
+      right: 3px !important;
+    }
+   "))
   ),
   
   layout_columns(

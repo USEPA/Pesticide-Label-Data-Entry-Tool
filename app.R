@@ -313,7 +313,10 @@ ui <- page_fillable(
       .resizable-card {
         transition: height 0.3s ease;
       }
-      #toggle-resize-btn {
+      .horizontal-resize-card, .vertical-resize-card {
+        transition: width 0.3s ease, height 0.3s ease; /* Ensure smooth transition */
+      }
+      #horizontal-resize-btn, #vertical-resize-btn {
         cursor: pointer;
         background-color: transparent;
         border: none;
@@ -321,32 +324,22 @@ ui <- page_fillable(
         padding: 5px;
         color: gray;
       }
-      
-       /* Keep the number + two unit selects on one line */
-      .ust-rate-row { display:flex; align-items:center; gap:6px; flex-wrap: nowrap; }
-      .ust-rate-row .ust-numeric { flex: 1 1 auto; min-width: 70px; }
-      .ust-rate-row .ust-units   { display:flex; align-items:center; gap:6px; flex: 0 0 auto; white-space: nowrap; }
-      .ust-units .shiny-input-container { width: auto !important; display: inline-block; }
-      .ust-units .ust-unit .selectize-control { width: auto !important; }
-      .ust-units .ust-unit:first-of-type .selectize-control { min-width: 50px; }
-      .ust-units .ust-unit:last-of-type  .selectize-control { min-width: 50px; }
+     .sub-card {
+      border: none; /* Removes border around the entire sub-card if needed */
+    }
 
-      /* Ensure selectize content doesn't wrap weirdly and allow external caret */
-      .ust-units .selectize-control .selectize-input {
-        width: auto; white-space: nowrap; overflow: visible; box-sizing: border-box;
-      }
-      .ust-units .selectize-control.single .selectize-input:after { display: none !important; }
-      .ust-units .ust-unit { position: relative; margin-right: 12px; }
-      .ust-units .ust-unit::after {
-        content: ''; position: absolute; right: -10px; top: 50%; margin-top: -3px;
-        border: 6px solid transparent; border-top-color: #6c757d; pointer-events: none; opacity: 0.9;
-      }
-      .ust-units .sep { padding: 0 2px; color: #555; }
-      .selectize-control.single .selectize-input,
-      .selectize-control.single .selectize-input.input-active {
-        min-height: calc(2.25rem + 2px); padding: .375rem .75rem; line-height: 1.5;
-      }
-      .selectize-control.single .selectize-input > input { height: 1.5rem; }
+    .sub-card .card-header {
+      border-bottom: 1px solid white; /* Changes the header-bottom border to white */
+    }
+
+    .sub-card .card-body {
+      border-top: 1px solid white; /* Ensures body-top border is white to match header */
+    }
+
+    /* If using borders inside card-body regions */
+    .sub-card .card-footer {
+      border-top: 1px solid white; /* Change footer-top border to match */
+    }
     "))
   ),
   
@@ -357,7 +350,7 @@ ui <- page_fillable(
     card(
       full_screen=TRUE,
       height="65vh",
-      class = "resizable-card",
+      class = "vertical-resize-card",
       card_header(
         fluidRow(
           column(3, tags$strong("UST Data Entry Tool")),
@@ -372,36 +365,57 @@ ui <- page_fillable(
       ),
       card_body(
         layout_columns(
-          col_widths = c(2, 10), # Adjusted widths for sub-cards
-          gap = "2px",
+          gap = "0px",
           
-          card(
-            class = "sub-card",
-            card_header(h5("Product-Level Inputs")),
-            card_body(
-              uiOutput("product_form")
-            )
-          ),
-          
-          card(
-            class = "sub-card",
-            card_header(h5("Use-Level Inputs")),
-            card_body(
-              fluidRow(
-                column(3,
-                       h5("Use Site Descriptors"),
-                       tags$div(style = "height: 5px;"),
-                       uiOutput("scenario_use_site_col1"),
-                       uiOutput("scenario_use_site_col2")),
-                column(3,
-                       h5("Rate Descriptors"),
-                       uiOutput("scenario_rate_col1"),
-                       uiOutput("scenario_rate_col2")),
-                column(3,
-                       h5("Restrictions"),
-                       uiOutput("scenario_restrictions_col1")),
-                column(3,
-                       uiOutput("scenario_restrictions_col2"))
+          div(
+            style = "display: flex;", 
+            id = "card-container",
+            
+            # First card
+            card(
+              class = "horizontal-resize-card sub-card",
+              style = "width: 15%;", 
+              card_header("Product-Level Inputs"),
+              card_body(
+                uiOutput("product_form")
+              )
+            ),
+            
+            # Second card with toggle button in header
+            card(
+              class = "horizontal-resize-card sub-card",
+              style = "width: 85%;",
+              card_header(
+                fluidRow(
+                  column(4,
+                         "Use-Level Inputs",
+                         actionButton(
+                           inputId = "horizontal-resize-btn",
+                           label = NULL,
+                           icon = icon("arrow-left"),
+                           class = "btn-link",
+                           style = "margin-left: auto;" # Align right in header
+                         )),
+                  column(4,),
+                  column(4,))
+              ),
+              card_body(
+                fluidRow(
+                  column(3,
+                         h5("Use Site Descriptors"),
+                         tags$div(style = "height: 5px;"),
+                         uiOutput("scenario_use_site_col1"),
+                         uiOutput("scenario_use_site_col2")),
+                  column(3,
+                         h5("Rate Descriptors"),
+                         uiOutput("scenario_rate_col1"),
+                         uiOutput("scenario_rate_col2")),
+                  column(3,
+                         h5("Restrictions"),
+                         uiOutput("scenario_restrictions_col1")),
+                  column(3,
+                         uiOutput("scenario_restrictions_col2"))
+                )
               )
             )
           )
@@ -419,10 +433,11 @@ ui <- page_fillable(
     card(
       full_screen=TRUE,
       height="35vh",
-      class = "resizable-card",
+      class = "vertical-resize-card",
       card_header(
         fluidRow(
-          column(4, "Data Display", actionButton("toggle-resize-btn", label = icon("arrow-up"), class = "btn-link")),
+          column(4, "Data Display", 
+                 actionButton("vertical-resize-btn", label = icon("arrow-up"), class = "btn-link")),
           column(4),
           column(4, style = "text-align: right;")
         )
@@ -445,12 +460,12 @@ ui <- page_fillable(
     )
   ),
   
-  # Add JavaScript to handle button click, resize cards, and toggle icon
+  # JavaScript for vertical resizing
   tags$script(HTML("
-    document.getElementById('toggle-resize-btn').addEventListener('click', function() {
-      var card1 = document.querySelectorAll('.resizable-card')[0];
-      var card2 = document.querySelectorAll('.resizable-card')[1];
-      var buttonIcon = document.querySelector('#toggle-resize-btn i');
+    document.getElementById('vertical-resize-btn').addEventListener('click', function() {
+      var card1 = document.querySelectorAll('.vertical-resize-card')[0];
+      var card2 = document.querySelectorAll('.vertical-resize-card')[1];
+      var buttonIcon = document.querySelector('#vertical-resize-btn i');
 
       if (card1.style.height !== '35vh') { // Check if it's not already in minimized state
         card1.style.height = '35vh'; // small size for Data Entry
@@ -464,7 +479,40 @@ ui <- page_fillable(
         buttonIcon.classList.add('fa-arrow-up');
       }
     });
-  "))
+  ")),
+  
+  # JavaScript for horizontal resizing
+  tags$script(HTML("
+    document.getElementById('horizontal-resize-btn').addEventListener('click', function() {
+      var cards = document.querySelectorAll('#card-container .horizontal-resize-card'); // Select cards inside container
+      var buttonIcon = document.querySelector('#horizontal-resize-btn i');
+
+      if (cards[0].style.width !== '0%') { // Check non-contracted state
+        cards[0].style.width = '0%'; // Contract first card
+        cards[1].style.width = '100%'; // Expand second card
+        buttonIcon.classList.remove('fa-arrow-left');
+        buttonIcon.classList.add('fa-arrow-right');
+      } else {
+        cards[0].style.width = '15%'; // Expand first card
+        cards[1].style.width = '85%'; // Contract second card
+        buttonIcon.classList.remove('fa-arrow-right');
+        buttonIcon.classList.add('fa-arrow-left');
+      }
+    });
+  ")),
+  tags$style(HTML("
+  /* Ensure there's no margin or padding between the subcards and the container */
+  #card-container {
+    margin: 0;
+    padding: 0;
+  }
+
+  .sub-card {
+    margin: 0;
+    padding: 0;
+    border: none; /* Optional: remove borders for tighter layout */
+  }
+"))
 )
 
 # ---------------- Server ----------------

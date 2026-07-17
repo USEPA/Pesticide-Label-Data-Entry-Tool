@@ -426,7 +426,8 @@ ui <- page_fillable(
           column(4, actionButton("add_entry", "Add row", class = "btn-sm btn-primary", icon = icon("plus"))),
           column(4),
           column(4, style = "text-align: right;", 
-                 actionButton("clear_all", "Clear form", class = "btn-sm", icon = icon("eraser")))
+                 actionButton("clear_use_only", "Clear Use", class = "btn-sm", icon = icon("eraser")),
+                 actionButton("clear_all", "Clear All", class = "btn-sm", icon = icon("eraser")))
         )
       )
     ),
@@ -1026,6 +1027,50 @@ server <- function(input, output, session) {
     # Text area
     updateTextAreaInput(session, scenario_textarea_id, value = "")
   })
+  
+  observeEvent(input$clear_use_only, {
+    
+    # Scenario texts
+    scenario_text_fields <- c(
+      "Max # App/Year", "Max # App/Crop Cycle",
+      "Max Number of Seasons/Crop Cycles per year",
+      "RTI (days)", "REI (hours)", "PHI (days)", "PGI (days)", "PSI (days)",
+      "Max Release Height (ft)", "Max Wind Speed (mph)"
+    )
+    lapply(scenario_text_fields, function(field) {
+      id <- paste0("scen__", idsafe(field))
+      updateTextInput(session, id, value = "")
+    })
+    # Scenario picklists
+    scenario_select_fields <- c(
+      "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
+      "App Type", "App Equipment Type", "Specific App Equipment", 
+      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
+      "Pollinator Protection Statement", "Soil Type Restrictions",
+      "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area"
+    )
+    lapply(scenario_select_fields, function(field) {
+      id <- paste0("scen__", idsafe(field))
+      updateSelectizeInput(session, id, selected = character(0))
+    })
+    # Numerics
+    updateNumericInput(session, "scen__Buffered_Area_ft_", value = NA_real_)
+    # Area-rate: reset value + units
+    for (f in scenario_area_rate_fields) {
+      base_id     <- paste0("scen__", idsafe(f))
+      numunit_id  <- paste0(base_id, "__numunit")
+      areaunit_id <- paste0(base_id, "__areaunit")
+      updateNumericInput(session, base_id, value = NA_real_)
+      num_choices <- unit_choices_for_field(f)
+      updateSelectizeInput(session, numunit_id,  choices = num_choices,
+                           selected = scenario_area_rate_defaults[[f]]$num)
+      updateSelectizeInput(session, areaunit_id, choices = area_units,
+                           selected = scenario_area_rate_defaults[[f]]$area)
+    }
+    # Text area
+    updateTextAreaInput(session, scenario_textarea_id, value = "")
+  })
+  
 }
 
 shinyApp(ui, server)

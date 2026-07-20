@@ -923,6 +923,7 @@ server <- function(input, output, session) {
       showNotification("Select exactly one row to load into the form.", type = "warning")
       return()
     }
+    
     sd <- scen_dat()
     row <- sd[sel, , drop = FALSE]
     
@@ -953,12 +954,21 @@ server <- function(input, output, session) {
       ch <- c(ch, missing)
       try(updateSelectizeInput(session, id, choices = ch, selected = vals), silent = TRUE)
     }
+    
+    # Populate scenario text fields
+    for (nm in setdiff(scenario_fields, c(scenario_picklist_fields, scenario_numeric_fields, scenario_area_rate_fields))) {
+      id <- paste0("scen__", idsafe(nm))
+      val <- as.character(row[[nm]][1] %||% "")
+      try(updateTextInput(session, id, value = val), silent = TRUE)
+    }
+    
     # Numeric
     for (nm in scenario_numeric_fields) {
       id <- paste0("scen__", idsafe(nm))
       val_num <- extract_number(row[[nm]][1] %||% "")
       try(updateNumericInput(session, id, value = val_num), silent = TRUE)
     }
+    
     # Area-rate (value + units)
     for (nm in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(nm))
@@ -975,7 +985,7 @@ server <- function(input, output, session) {
       try(updateSelectizeInput(session, numunit_id, choices = num_choices, selected = units$num),  silent = TRUE)
       try(updateSelectizeInput(session, areaunit_id, choices = area_choices, selected = units$area), silent = TRUE)
     }
-   
+    
     showNotification("Row loaded into form. Edit and click 'Add row' to save a new entry.", type = "message")
   })
   

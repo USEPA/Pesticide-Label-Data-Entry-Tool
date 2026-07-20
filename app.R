@@ -230,7 +230,7 @@ scenario_fields <- c(
   "Product Max Rate/App",
   "AI Max Rate/App","Max # App/Year","Max # App/Crop Cycle",
   "Product Max Rate/Year","Product Max Rate/Crop Cycle",
-  "AI Max Rate/Year","AI Max Rate/Cycle",
+  "AI Max Rate/Year","AI Max Rate/Crop Cycle",
   "Max Number of Seasons/Crop Cycles per year","RTI (days)","REI (hours)","PHI (days)","PGI (days)","PSI (days)",
   "ASABE Droplet Size","Max Release Height (ft)","Max Wind Speed (mph)",
   "Buffered Area (ft)","Buffered Area (Term)",
@@ -258,7 +258,7 @@ scenario_area_rate_fields <- c(
   "Product Max Rate/Year",
   "Product Max Rate/Crop Cycle",
   "AI Max Rate/Year",
-  "AI Max Rate/Cycle"
+  "AI Max Rate/Crop Cycle"
 )
 
 scenario_area_rate_defaults <- list(
@@ -268,7 +268,7 @@ scenario_area_rate_defaults <- list(
   "Product Max Rate/Year"                          = list(num = "fl oz", area = "ac"),
   "Product Max Rate/Crop Cycle"                    = list(num = "fl oz", area = "ac"),
   "AI Max Rate/Year"                               = list(num = "lb",    area = "ac"),
-  "AI Max Rate/Cycle"                              = list(num = "lb",    area = "ac")
+  "AI Max Rate/Crop Cycle"                         = list(num = "lb",    area = "ac")
 )
 
 # ---------------- UI ----------------
@@ -749,21 +749,21 @@ server <- function(input, output, session) {
         prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
       ),
       make_area_rate_input(
-        "AI Max Rate/Year",
-        default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Year"]]$num,
-        default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Year"]]$area,
-        prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
-      ),
-      make_area_rate_input(
         "Product Max Rate/Crop Cycle",
         default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/Crop Cycle"]]$num,
         default_area_unit = scenario_area_rate_defaults[["Product Max Rate/Crop Cycle"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = TRUE
       ),
       make_area_rate_input(
-        "AI Max Rate/Cycle",
-        default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$num,
-        default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Cycle"]]$area,
+        "AI Max Rate/Year",
+        default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Year"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Year"]]$area,
+        prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
+      ),
+      make_area_rate_input(
+        "AI Max Rate/Crop Cycle",
+        default_num_unit  = scenario_area_rate_defaults[["AI Max Rate/Crop Cycle"]]$num,
+        default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Crop Cycle"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
       ),
       make_input("Max Number of Seasons/Crop Cycles per year", "text", prefix = "scen__")
@@ -787,10 +787,10 @@ server <- function(input, output, session) {
     req(vocab())
     tagList(
       make_input("ASABE Droplet Size", "pick", choices = vocab()[["ASABE Droplet Size"]], prefix = "scen__", multiple = TRUE),
-      make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
-      make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE),
       make_input("Max Release Height (ft)", "text", prefix = "scen__"),
       make_input("Max Wind Speed (mph)", "text", prefix = "scen__"),
+      make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
+      make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE),
       make_input("Site-Level ALLOWED Geographic Area", "pick", choices = vocab()[["Site-Level ALLOWED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),

@@ -686,7 +686,7 @@ server <- function(input, output, session) {
       make_input("Co-Formulated AI", "pick", choices = NULL, prefix = "prod__", multiple = TRUE, placeholder = "Type each AI name and press enter"),
       make_input("Physical Form", "pick", choices = vocab()[["Physical Form"]], prefix = "prod__", multiple = TRUE),
       make_input("% AI", "text", prefix = "prod__"),
-      make_input("AI Concentration (i.e. product density if liquid)", "text", prefix = "prod__"),
+      make_input("AI Concentration", "text", prefix = "prod__"),
       make_input("RUP", "pick", choices = vocab()[["RUP"]], prefix = "prod__", multiple = FALSE),
       make_input("Product-level PPE", "pick", choices = vocab()[["Product-level PPE"]], prefix = "prod__", multiple = TRUE)
     )
@@ -706,6 +706,7 @@ server <- function(input, output, session) {
     tagList(
       make_input("Location", "pick", choices = vocab()[["Location"]], prefix = "scen__", multiple = TRUE),
       make_input("App Target", "pick", choices = vocab()[["App Target"]], prefix = "scen__", multiple = TRUE),
+      make_input("App Type", "pick", choices = vocab()[["App Type"]], prefix = "scen__", multiple = TRUE),
       make_input("App Equipment Type", "pick", choices = vocab()[["App Equipment Type"]], prefix = "scen__", multiple = TRUE),
       make_input("Specific App Equipment", "pick", choices = vocab()[["Specific App Equipment"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Site)", "pick", choices = vocab()[["App Timing (Site)"]], prefix = "scen__", multiple = TRUE),
@@ -807,8 +808,8 @@ server <- function(input, output, session) {
       make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
       make_input("Pollinator Protection Statement", "pick", choices = vocab()[["Pollinator Protection Statement"]], prefix = "scen__", multiple = TRUE),
-      make_input("Other Site/Scenario Specific Restrictions & Limitations", "text", prefix = "scen__")
-       )
+      make_textarea_input("Other Site/Scenario Specific Restrictions & Limitations", prefix = "scen__", rows = 4)
+    )
   })
   
   # ----- Validation -----

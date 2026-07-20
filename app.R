@@ -707,8 +707,11 @@ server <- function(input, output, session) {
       make_input("Location", "pick", choices = vocab()[["Location"]], prefix = "scen__", multiple = TRUE),
       make_input("App Target", "pick", choices = vocab()[["App Target"]], prefix = "scen__", multiple = TRUE),
       make_input("App Equipment Type", "pick", choices = vocab()[["App Equipment Type"]], prefix = "scen__", multiple = TRUE),
-      make_input("Specific App Equipment", "pick", choices = vocab()[["Specific App Equipment"]], prefix = "scen__", multiple = TRUE)
-    )
+      make_input("Specific App Equipment", "pick", choices = vocab()[["Specific App Equipment"]], prefix = "scen__", multiple = TRUE),
+      make_input("App Timing (Site)", "pick", choices = vocab()[["App Timing (Site)"]], prefix = "scen__", multiple = TRUE),
+      make_input("App Timing (Pest)", "pick", choices = vocab()[["App Timing (Pest)"]], prefix = "scen__", multiple = TRUE, placeholder = "Use only if all crop stages is selected in app timing (site) field"),
+      )
+    
   })
   
   # ---- Scenario rate columns ----
@@ -772,23 +775,40 @@ server <- function(input, output, session) {
   output$scenario_restrictions_col1 <- renderUI({
     req(vocab())
     tagList(
-      make_input("App Timing (Site)", "pick", choices = vocab()[["App Timing (Site)"]], prefix = "scen__", multiple = TRUE),
-      make_input("App Timing (Pest)", "pick", choices = vocab()[["App Timing (Pest)"]], prefix = "scen__", multiple = TRUE, placeholder = "Use only if all crop stages is selected in app timing (site) field"),
       make_input("RTI (days)", "text", prefix = "scen__"),
       make_input("REI (hours)", "text", prefix = "scen__"),
-      make_input("PHI (days)", "text", prefix = "scen__")
+      make_input("PHI (days)", "text", prefix = "scen__"),
+      make_input("PGI (days)", "text", prefix = "scen__"),
+      make_input("PSI (days)", "text", prefix = "scen__"),
     )
   })
+  
+  make_textarea_input <- function(field_label, prefix = "scen__", rows = 3, placeholder = "") {
+    input_id <- paste0(prefix, idsafe(field_label))
+    textAreaInput(
+      inputId = input_id,
+      label = field_label,
+      value = "",
+      rows = rows,
+      placeholder = placeholder,
+      width = "100%"
+    )
+  }
   
   output$scenario_restrictions_col2 <- renderUI({
     req(vocab())
     tagList(
-      make_input("PGI (days)", "text", prefix = "scen__"),
-      make_input("PSI (days)", "text", prefix = "scen__"),
       make_input("ASABE Droplet Size", "pick", choices = vocab()[["ASABE Droplet Size"]], prefix = "scen__", multiple = TRUE),
       make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
-      make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE)
-    )
+      make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE),
+      make_input("Max Release Height (ft)", "text", prefix = "scen__"),
+      make_input("Max Wind Speed (mph)", "text", prefix = "scen__"),
+      make_input("Site-Level ALLOWED Geographic Area", "pick", choices = vocab()[["Site-Level ALLOWED Geographic Area"]], prefix = "scen__", multiple = TRUE),
+      make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
+      make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
+      make_input("Pollinator Protection Statement", "pick", choices = vocab()[["Pollinator Protection Statement"]], prefix = "scen__", multiple = TRUE),
+      make_input("Other Site/Scenario Specific Restrictions & Limitations", "text", prefix = "scen__")
+       )
   })
   
   # ----- Validation -----

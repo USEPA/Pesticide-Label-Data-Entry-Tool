@@ -872,6 +872,9 @@ server <- function(input, output, session) {
         showNotification("Please correct the highlighted fields, then try again.", type = "error")
         return()
       }
+      
+      expected_labels <- c(product_fields, scenario_fields)
+      
       # Scenario inputs
       scen_row <- collect_scenario_row(
         input, scenario_fields, prefix = "scen__",
@@ -883,9 +886,13 @@ server <- function(input, output, session) {
       # Product inputs
       prod_row <- collect_row(input, product_fields, prefix = "prod__")
       
-      # Combine and append
+      # Combine, standardize, and append
       new_row <- dplyr::bind_cols(prod_row, scen_row)
-      scen_dat(dplyr::bind_rows(scen_dat(), new_row))
+      new_row <- ensure_expected_columns(new_row, expected_labels)
+      
+      current <- ensure_expected_columns(scen_dat(), expected_labels)
+      scen_dat(dplyr::bind_rows(current, new_row))
+      
       showNotification(sprintf("Row added. Total entries: %d", nrow(scen_dat())), type = "message")
     }, error = function(e) {
       showNotification(paste("Failed to add row:", conditionMessage(e)), type = "error", duration = 8)
@@ -991,16 +998,21 @@ server <- function(input, output, session) {
   
   # ----- Table -----
   output$tbl_scen <- DT::renderDT({
-    dat <- scen_dat()
+    expected_labels <- c(product_fields, scenario_fields)
+    dat <- ensure_expected_columns(scen_dat(), expected_labels)
     req(ncol(dat) > 0)
-    df <- as.data.frame(dat)
-    opts <- list(
-      pageLength = 25,
-      scrollX = TRUE,
-      searching = FALSE,
-      lengthChange = FALSE
+    
+    DT::datatable(
+      as.data.frame(dat),
+      options = list(
+        pageLength = 25,
+        scrollX = TRUE,
+        searching = FALSE,
+        lengthChange = FALSE
+      ),
+      rownames = FALSE,
+      selection = "multiple"
     )
-    DT::datatable(df, options = opts, rownames = FALSE, selection = "multiple")
   })
   
   # ----- Download -----

@@ -1012,7 +1012,7 @@ server <- function(input, output, session) {
     product_text_fields <- c(
       "EPA Registration Number", "PC Code", "AI Name",
       "% AI",
-      "AI Concentration (i.e. Product Density if liquid)"
+      "AI Concentration"
     )
     lapply(product_text_fields, function(field) {
       id <- paste0("prod__", idsafe(field))
@@ -1060,8 +1060,6 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, areaunit_id, choices = area_units,
                            selected = scenario_area_rate_defaults[[f]]$area)
     }
-    # Text area
-    updateTextAreaInput(session, scenario_textarea_id, value = "")
   })
   
   observeEvent(input$clear_use_only, {
@@ -1103,8 +1101,6 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, areaunit_id, choices = area_units,
                            selected = scenario_area_rate_defaults[[f]]$area)
     }
-    # Text area
-    updateTextAreaInput(session, scenario_textarea_id, value = "")
   })
   
 }

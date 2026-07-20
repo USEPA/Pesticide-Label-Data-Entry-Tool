@@ -118,9 +118,15 @@ make_input <- function(field_label, type = c("text", "numeric", "pick"), choices
   } else if (type == "numeric") {
     numericInput(input_id, field_label, value = NA_real_, width = "100%")
   } else {
-    textInput(input_id, field_label, value = "", width = "100%")
+    textInput(
+      inputId = input_id,
+      label = field_label,
+      value = "",
+      placeholder = placeholder,
+      width = "100%"
+    )
   }
-}
+  }
 
 # ---------- Unit choices ----------
 weight_units <- c("lb", "oz", "kg", "g")
@@ -684,7 +690,7 @@ server <- function(input, output, session) {
       make_input("Co-Formulated AI", "pick", choices = NULL, prefix = "prod__", multiple = TRUE, placeholder = "Type each AI name and press enter"),
       make_input("Physical Form", "pick", choices = vocab()[["Physical Form"]], prefix = "prod__", multiple = TRUE),
       make_input("% AI", "text", prefix = "prod__"),
-      make_input("AI Concentration", "text", prefix = "prod__"),
+      make_input("AI Concentration", "text", prefix = "prod__", placeholder = "Typically lbs/gal"),
       make_input("RUP", "pick", choices = vocab()[["RUP"]], prefix = "prod__", multiple = FALSE),
       make_input("Product-level PPE", "pick", choices = vocab()[["Product-level PPE"]], prefix = "prod__", multiple = TRUE)
     )

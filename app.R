@@ -236,7 +236,8 @@ scenario_fields <- c(
   "Buffered Area (ft)","Buffered Area (Term)",
   "Site-Level ALLOWED Geographic Area","Site-Level PROHIBITED Geographic Area",
   "Soil Type Restrictions",
-  "Pollinator Protection Statement"
+  "Pollinator Protection Statement",
+  "Other Site/Scenario Specific Restrictions & Limitations"
 )
 
 scenario_picklist_fields <- c(
@@ -269,9 +270,6 @@ scenario_area_rate_defaults <- list(
   "AI Max Rate/Year"                               = list(num = "lb",    area = "ac"),
   "AI Max Rate/Cycle"                              = list(num = "lb",    area = "ac")
 )
-
-scenario_textarea_label <- "Other Site/Scenario Specific Restrictions & Limitations"
-scenario_textarea_id    <- "scen__Other_Site_Scenario_Specific_Restrictions_Limitations"
 
 # ---------------- UI ----------------
 
@@ -556,7 +554,7 @@ server <- function(input, output, session) {
   
   # Empty schema: table stores BOTH product + scenario fields (no Product_ID)
   make_empty_scen <- function() {
-    cols <- c(product_fields, scenario_fields, scenario_textarea_label)
+    cols <- c(product_fields, scenario_fields)
     tibble::as_tibble(setNames(rep(list(character()), length(cols)), cols))
   }
   scen_dat <- reactiveVal(make_empty_scen())
@@ -597,7 +595,7 @@ server <- function(input, output, session) {
     req(input$file_upload_scenario)
     removeModal()
     
-    expected_labels <- c(product_fields, scenario_fields, scenario_textarea_label)
+    expected_labels <- c(product_fields, scenario_fields)
     
     # Read as all-character
     data <- tryCatch({
@@ -639,7 +637,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$commit_upload_scen, {
     req(upload_buffer())
-    expected_labels <- c(product_fields, scenario_fields, scenario_textarea_label)
+    expected_labels <- c(product_fields, scenario_fields)
     
     data <- ensure_expected_columns(upload_buffer(), expected_labels)
     upload_buffer(NULL)
@@ -784,17 +782,6 @@ server <- function(input, output, session) {
     )
   })
   
-  make_textarea_input <- function(field_label, prefix = "scen__", rows = 3, placeholder = "") {
-    input_id <- paste0(prefix, idsafe(field_label))
-    textAreaInput(
-      inputId = input_id,
-      label = field_label,
-      value = "",
-      rows = rows,
-      placeholder = placeholder,
-      width = "100%"
-    )
-  }
   
   output$scenario_restrictions_col2 <- renderUI({
     req(vocab())
@@ -808,7 +795,7 @@ server <- function(input, output, session) {
       make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
       make_input("Pollinator Protection Statement", "pick", choices = vocab()[["Pollinator Protection Statement"]], prefix = "scen__", multiple = TRUE),
-      make_textarea_input("Other Site/Scenario Specific Restrictions & Limitations", prefix = "scen__", rows = 4)
+      make_input("Other Site/Scenario Specific Restrictions & Limitations", "text", prefix = "scen__")
     )
   })
   
@@ -892,8 +879,6 @@ server <- function(input, output, session) {
         area_rate_defaults = scenario_area_rate_defaults,
         numeric_fields     = scenario_numeric_fields
       )
-      other <- input[[scenario_textarea_id]]
-      scen_row[[scenario_textarea_label]] <- if (is.null(other) || !nzchar(other)) NA_character_ else other
       
       # Product inputs
       prod_row <- collect_row(input, product_fields, prefix = "prod__")
@@ -990,10 +975,7 @@ server <- function(input, output, session) {
       try(updateSelectizeInput(session, numunit_id, choices = num_choices, selected = units$num),  silent = TRUE)
       try(updateSelectizeInput(session, areaunit_id, choices = area_choices, selected = units$area), silent = TRUE)
     }
-    # Other textarea
-    if (scenario_textarea_label %in% names(row)) {
-      try(updateTextAreaInput(session, scenario_textarea_id, value = row[[scenario_textarea_label]][1] %||% ""), silent = TRUE)
-    }
+   
     showNotification("Row loaded into form. Edit and click 'Add row' to save a new entry.", type = "message")
   })
   
@@ -1046,7 +1028,7 @@ server <- function(input, output, session) {
       "Max # App/Year", "Max # App/Crop Cycle",
       "Max Number of Seasons/Crop Cycles per year",
       "RTI (days)", "REI (hours)", "PHI (days)", "PGI (days)", "PSI (days)",
-      "Max Release Height (ft)", "Max Wind Speed (mph)"
+      "Max Release Height (ft)", "Max Wind Speed (mph)", "Other Site/Scenario Specific Restrictions & Limitations"
     )
     lapply(scenario_text_fields, function(field) {
       id <- paste0("scen__", idsafe(field))

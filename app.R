@@ -1077,7 +1077,7 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, id, selected = character(0))
     })
     # Numerics
-    updateNumericInput(session, "scen__Buffered_Area_ft_", value = NA_real_)
+    updateNumericInput(session, "scen__Buffered_Area__ft_", value = NA_real_)
     # Area-rate: reset value + units
     for (f in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(f))
@@ -1118,7 +1118,7 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, id, selected = character(0))
     })
     # Numerics
-    updateNumericInput(session, "scen__Buffered_Area_ft_", value = NA_real_)
+    updateNumericInput(session, "scen__Buffered_Area__ft_", value = NA_real_)
     # Area-rate: reset value + units
     for (f in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(f))

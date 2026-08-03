@@ -330,6 +330,7 @@ ui <- page_fillable(
     }
     .sub-card {
       border: none; /* Removes border around the entire sub-card if needed */
+      gap: 5px;
     }
     .sub-card .card-header {
       border-bottom: 1px solid white; /* Changes the header-bottom border to white */
@@ -344,7 +345,7 @@ ui <- page_fillable(
     .ust-rate-row { 
       display: flex; 
       align-items: center; 
-      gap: 6px; 
+      gap: 5px; 
       flex-wrap: nowrap; 
     }
     .ust-rate-row .ust-numeric { 
@@ -354,7 +355,7 @@ ui <- page_fillable(
     .ust-rate-row .ust-units { 
       display: flex; 
       align-items: center; 
-      gap: 6px; 
+      gap: 4px; 
       flex: 0 0 auto; 
       white-space: nowrap; 
     }
@@ -377,6 +378,8 @@ ui <- page_fillable(
       bottom: 3px !important;
       right: 3px !important;
     }
+    .shiny-input-container {
+      margin-bottom: 5px; /* Reduce spacing between inputs */
    "))
   ),
   
@@ -451,6 +454,7 @@ ui <- page_fillable(
                          h5("Restrictions"),
                          uiOutput("scenario_restrictions_col1")),
                   column(3,
+                         h5(" "),
                          uiOutput("scenario_restrictions_col2"))
                 )
               )
@@ -785,6 +789,9 @@ server <- function(input, output, session) {
       make_input("PHI (days)", "text", prefix = "scen__"),
       make_input("PGI (days)", "text", prefix = "scen__"),
       make_input("PSI (days)", "text", prefix = "scen__"),
+      make_input("ASABE Droplet Size", "pick", choices = vocab()[["ASABE Droplet Size"]], prefix = "scen__", multiple = TRUE),
+      make_input("Max Release Height (ft)", "text", prefix = "scen__"),
+      make_input("Max Wind Speed (mph)", "text", prefix = "scen__")
     )
   })
   
@@ -792,9 +799,6 @@ server <- function(input, output, session) {
   output$scenario_restrictions_col2 <- renderUI({
     req(vocab())
     tagList(
-      make_input("ASABE Droplet Size", "pick", choices = vocab()[["ASABE Droplet Size"]], prefix = "scen__", multiple = TRUE),
-      make_input("Max Release Height (ft)", "text", prefix = "scen__"),
-      make_input("Max Wind Speed (mph)", "text", prefix = "scen__"),
       make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
       make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE),
       make_input("Site-Level ALLOWED Geographic Area", "pick", choices = vocab()[["Site-Level ALLOWED Geographic Area"]], prefix = "scen__", multiple = TRUE),

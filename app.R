@@ -97,10 +97,12 @@ build_vocab <- function(path) {
 }
 
 # ---------------- Input builders ----------------
-make_input <- function(field_label, type = c("text", "numeric", "pick"), choices = NULL, prefix = "", multiple = FALSE, placeholder = "Type or pick…") {
+make_input <- function(field_label, type = c("text", "numeric", "pick"), choices = NULL, prefix = "", multiple = FALSE, placeholder = NULL) {
   type <- match.arg(type)
   input_id <- paste0(prefix, idsafe(field_label))
-  if (type == "pick") {
+ 
+   if (type == "pick") {
+     if (is.null(placeholder)) placeholder <- "Type or pick…"
     selectizeInput(
       inputId = input_id, label = field_label,
       choices = choices %||% character(0),
@@ -122,7 +124,7 @@ make_input <- function(field_label, type = c("text", "numeric", "pick"), choices
       inputId = input_id,
       label = field_label,
       value = "",
-      placeholder = placeholder,
+      placeholder = placeholder %||% "",
       width = "100%"
     )
   }
@@ -1079,7 +1081,7 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, id, selected = character(0))
     })
     # Numerics
-    updateNumericInput(session, "scen__Buffered_Area_ft_", value = NA_real_)
+    updateNumericInput(session, "scen__Buffered_Area__ft_", value = NA_real_)
     # Area-rate: reset value + units
     for (f in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(f))
@@ -1120,7 +1122,7 @@ server <- function(input, output, session) {
       updateSelectizeInput(session, id, selected = character(0))
     })
     # Numerics
-    updateNumericInput(session, "scen__Buffered_Area_ft_", value = NA_real_)
+    updateNumericInput(session, "scen__Buffered_Area__ft_", value = NA_real_)
     # Area-rate: reset value + units
     for (f in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(f))

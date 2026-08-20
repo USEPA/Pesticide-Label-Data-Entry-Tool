@@ -97,12 +97,12 @@ build_vocab <- function(path) {
 }
 
 # ---------------- Input builders ----------------
-make_input <- function(field_label, type = c("text", "numeric", "pick"), choices = NULL, prefix = "", multiple = FALSE, placeholder = NULL) {
+make_input <- function(field_label, type = c("text", "numeric", "pick","textArea"), choices = NULL, prefix = "", multiple = FALSE, placeholder = NULL) {
   type <- match.arg(type)
   input_id <- paste0(prefix, idsafe(field_label))
  
    if (type == "pick") {
-     if (is.null(placeholder)) placeholder <- "Type or pick…"
+     if (is.null(placeholder)) placeholder <- ""
     selectizeInput(
       inputId = input_id, label = field_label,
       choices = choices %||% character(0),
@@ -119,13 +119,22 @@ make_input <- function(field_label, type = c("text", "numeric", "pick"), choices
     )
   } else if (type == "numeric") {
     numericInput(input_id, field_label, value = NA_real_, width = "100%")
-  } else {
+  } else if (type == "text") {
     textInput(
       inputId = input_id,
       label = field_label,
       value = "",
       placeholder = placeholder %||% "",
       width = "100%"
+    )
+  } else {
+    textAreaInput(
+      inputId = input_id,
+      label = field_label,
+      value = "",
+      placeholder = placeholder %||% "",
+      width = "100%",
+      rows=5
     )
   }
   }
@@ -807,7 +816,7 @@ server <- function(input, output, session) {
       make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
       make_input("Pollinator Protection Statement", "pick", choices = vocab()[["Pollinator Protection Statement"]], prefix = "scen__", multiple = TRUE),
-      make_input("Other Site/Scenario Specific Restrictions & Limitations", "text", prefix = "scen__")
+      make_input("Other Site/Scenario Specific Restrictions & Limitations", "textArea", prefix = "scen__")
     )
   })
   

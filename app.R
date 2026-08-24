@@ -100,9 +100,9 @@ build_vocab <- function(path) {
 make_input <- function(field_label, type = c("text", "numeric", "pick","textArea"), choices = NULL, prefix = "", multiple = FALSE, placeholder = NULL) {
   type <- match.arg(type)
   input_id <- paste0(prefix, idsafe(field_label))
- 
-   if (type == "pick") {
-     if (is.null(placeholder)) placeholder <- "Type or pick..."
+  
+  if (type == "pick") {
+    if (is.null(placeholder)) placeholder <- "Type or pick..."
     selectizeInput(
       inputId = input_id, label = field_label,
       choices = choices %||% character(0),
@@ -138,7 +138,7 @@ make_input <- function(field_label, type = c("text", "numeric", "pick","textArea
       rows=5
     )
   }
-  }
+}
 
 # ---------- Unit choices ----------
 weight_units <- c("lb", "oz", "kg", "g","") #added "" to allow for blank default
@@ -278,7 +278,7 @@ scenario_area_rate_fields <- c(
   "Product Max Rate/Year",
   "Product Max Rate/Crop Cycle",
   "AI Max Rate/Year",
-  "AI Max Rate/Crop Cycle",
+  "AI Max Rate/Crop Cycle"
 )
 
 scenario_area_rate_defaults <- list(
@@ -394,7 +394,11 @@ ui <- page_fillable(
       right: 3px !important;
     }
     .shiny-input-container {
-      margin-bottom: 5px; /* Reduce spacing between inputs */
+      margin-bottom: 5px; /* Reduce spacing between inputs */}
+    
+    .product-form .shiny-input-container {
+     margin-bottom: 3px;
+}
    "))
   ),
   
@@ -524,7 +528,7 @@ ui <- page_fillable(
       var card2 = document.querySelectorAll('.vertical-resize-card')[1];
       var buttonIcon = document.querySelector('#vertical-resize-btn i');
 
-      if (card1.style.height !== '35vh') { // Check if it's not already in minimized state
+if (card1.style.height !== '35vh') { // Check if it's not already in minimized state
         card1.style.height = '35vh'; // small size for Data Entry
         card2.style.height = '65vh'; // large size for Data Display
         buttonIcon.classList.remove('fa-arrow-up'); // Change icon to down arrow
@@ -542,23 +546,23 @@ ui <- page_fillable(
   tags$script(HTML("
     document.getElementById('horizontal-resize-btn').addEventListener('click', function() {
       var cards = document.querySelectorAll('#card-container .horizontal-resize-card'); // Select cards inside container
-      var buttonIcon = document.querySelector('#horizontal-resize-btn i');
-
-      if (cards[0].style.width !== '0%') { // Check non-contracted state
-        cards[0].style.width = '0%'; // Contract first card
-        cards[1].style.width = '100%'; // Expand second card
-        buttonIcon.classList.remove('fa-arrow-left');
-        buttonIcon.classList.add('fa-arrow-right');
-      } else {
-        cards[0].style.width = '15%'; // Expand first card
-        cards[1].style.width = '85%'; // Contract second card
-        buttonIcon.classList.remove('fa-arrow-right');
-        buttonIcon.classList.add('fa-arrow-left');
-      }
-    });
-  ")),
+  var buttonIcon = document.querySelector('#horizontal-resize-btn i');
+  
+  if (cards[0].style.width !== '0%') { // Check non-contracted state
+    cards[0].style.width = '0%'; // Contract first card
+    cards[1].style.width = '100%'; // Expand second card
+    buttonIcon.classList.remove('fa-arrow-left');
+    buttonIcon.classList.add('fa-arrow-right');
+  } else {
+    cards[0].style.width = '15%'; // Expand first card
+    cards[1].style.width = '85%'; // Contract second card
+    buttonIcon.classList.remove('fa-arrow-right');
+    buttonIcon.classList.add('fa-arrow-left');
+  }
+});
+")),
   tags$style(HTML("
-  /* Ensure there's no margin or padding between the subcards and the container */
+/* Ensure there's no margin or padding between the subcards and the container */
   #card-container {
     margin: 0;
     padding: 0;
@@ -735,7 +739,7 @@ server <- function(input, output, session) {
       make_input("Specific App Equipment", "pick", choices = vocab()[["Specific App Equipment"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Site)", "pick", choices = vocab()[["App Timing (Site)"]], prefix = "scen__", multiple = TRUE),
       make_input("App Timing (Pest)", "pick", choices = vocab()[["App Timing (Pest)"]], prefix = "scen__", multiple = TRUE, placeholder = "Use only if all crop stages is selected in app timing (site) field"),
-      )
+    )
     
   })
   
@@ -850,11 +854,37 @@ server <- function(input, output, session) {
   }, once = TRUE)
   
   # ----- Collectors -----
-  collect_row <- function(input, fields, prefix = "") {
-    ids <- paste0(prefix, idsafe(fields))
-    vals <- map(ids, ~ input[[.x]])
-    vals <- map_chr(vals, collapse_multi)
-    tibble(!!!setNames(vals, fields))
+  collect_row <- function(input, fields, prefix = "",
+                          area_rate_fields = character(0),
+                          area_rate_defaults = list()) {
+    vals <- vector("list", length(fields))
+    names(vals) <- fields
+    
+    for (f in fields) {
+      id <- paste0(prefix, idsafe(f))
+      
+      if (f %in% area_rate_fields) {
+        val <- input[[id]]
+        if (is.null(val) || is.na(val)) {
+          vals[[f]] <- NA_character_
+        } else {
+          numu  <- input[[paste0(id, "__numunit")]]  %||% area_rate_defaults[[f]]$num
+          areau <- input[[paste0(id, "__areaunit")]] %||% area_rate_defaults[[f]]$area
+          vals[[f]] <- sprintf("%s %s/%s", val, numu, areau)
+        }
+      } else {
+        v <- input[[id]]
+        if (is.null(v)) {
+          vals[[f]] <- NA_character_
+        } else if (is.character(v)) {
+          vals[[f]] <- if (length(v) > 1) paste(v, collapse = "; ") else if (nzchar(v)) v else NA_character_
+        } else {
+          vals[[f]] <- as.character(v)
+        }
+      }
+    }
+    
+    tibble::as_tibble(vals)
   }
   collect_scenario_row <- function(input, fields, prefix,
                                    area_rate_fields,
@@ -910,7 +940,11 @@ server <- function(input, output, session) {
       )
       
       # Product inputs
-      prod_row <- collect_row(input, product_fields, prefix = "prod__")
+      prod_row <- prod_row <- collect_row(
+        input, product_fields, prefix = "prod__",
+        area_rate_fields   = c("AI Concentration"),
+        area_rate_defaults = scenario_area_rate_defaults
+      )
       
       # Combine, standardize, and append
       new_row <- dplyr::bind_cols(prod_row, scen_row)
@@ -961,9 +995,11 @@ server <- function(input, output, session) {
     row <- sd[sel, , drop = FALSE]
     
     # Populate product inputs
+    # Populate product inputs
     for (nm in product_fields) {
       id <- paste0("prod__", idsafe(nm))
       val <- row[[nm]][1] %||% ""
+      
       if (nm %in% c("Physical Form", "Product-level PPE")) {
         try(updateSelectizeInput(session, id, selected = split_multi(val)), silent = TRUE)
         
@@ -973,6 +1009,23 @@ server <- function(input, output, session) {
         
       } else if (nm == "RUP") {
         try(updateSelectizeInput(session, id, selected = if (nzchar(val)) val else NULL), silent = TRUE)
+        
+      } else if (nm == "AI Concentration") {
+        val_num <- extract_number(val)
+        units <- parse_rate_units(
+          val,
+          default_num  = scenario_area_rate_defaults[["AI Concentration"]]$num,
+          default_area = scenario_area_rate_defaults[["AI Concentration"]]$area
+        )
+        
+        try(updateNumericInput(session, id, value = val_num), silent = TRUE)
+        try(updateSelectizeInput(session, paste0(id, "__numunit"),
+                                 choices = unique(c(unit_choices_for_field(nm), units$num)),
+                                 selected = units$num), silent = TRUE)
+        try(updateSelectizeInput(session, paste0(id, "__areaunit"),
+                                 choices = unique(c(area_units, units$area)),
+                                 selected = units$area), silent = TRUE)
+        
       } else {
         try(updateTextInput(session, id, value = val), silent = TRUE)
       }
@@ -1059,13 +1112,25 @@ server <- function(input, output, session) {
     # Product
     product_text_fields <- c(
       "EPA Registration Number", "PC Code", "AI Name",
-      "% AI",
-      "AI Concentration"
+      "% AI"
     )
     lapply(product_text_fields, function(field) {
       id <- paste0("prod__", idsafe(field))
       updateTextInput(session, id, value = "")
     })
+    # Reset AI Concentration area-rate input
+    base_id     <- paste0("prod__", idsafe("AI Concentration"))
+    numunit_id  <- paste0(base_id, "__numunit")
+    areaunit_id <- paste0(base_id, "__areaunit")
+    
+    updateNumericInput(session, base_id, value = NA_real_)
+    updateSelectizeInput(session, numunit_id,
+                         choices = unit_choices_for_field("AI Concentration"),
+                         selected = scenario_area_rate_defaults[["AI Concentration"]]$num)
+    updateSelectizeInput(session, areaunit_id,
+                         choices = area_units,
+                         selected = scenario_area_rate_defaults[["AI Concentration"]]$area)
+    
     updateSelectizeInput(session, "prod__Physical_Form", selected = character(0))
     updateSelectizeInput(session, "prod__Product_level_PPE", selected = character(0))
     updateSelectizeInput(session, "prod__Co_Formulated_AI", selected = character(0))

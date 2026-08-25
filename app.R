@@ -435,7 +435,10 @@ ui <- page_fillable(
               class = "horizontal-resize-card sub-card",
               style = "width: 15%;", 
               card_header("Product-Level Inputs"),
-              card_body(
+              card_body( tags$div(
+                style = "display: flex; align-items: center; gap: 6px;",
+                tags$span("Product Descriptors:"),
+                textOutput("prod_col_progress", inline = TRUE)),
                 uiOutput("product_form")
               )
             ),
@@ -720,6 +723,27 @@ server <- function(input, output, session) {
     )
   })
   
+  prod_col_texts<-c("EPA Registration Number",
+                  "AI Name",
+                  "PC Code",
+                  "Co-Formulated AI",
+                  "Physical Form",
+                  "% AI",
+                  "AI Concentration",
+                  "RUP",
+                  "Product-level PPE")
+  
+                  prod_col_ids<-paste0("prod__",idsafe(prod_col_texts))
+  
+                
+                                  
+  #length(prod_col_ids)
+  
+  output$prod_col_progress<- renderText({
+    paste0("(",count_filled(prod_col_ids), "/",length(prod_col_ids),")")
+  })
+  
+  
   # ---- Scenario use site columns ----
   output$scenario_use_site_col1<-renderUI({
     req(vocab())
@@ -828,6 +852,26 @@ server <- function(input, output, session) {
       make_input("Other Site/Scenario Specific Restrictions & Limitations", "textArea", prefix = "scen__")
     )
   })
+  
+  output$col1_text <- renderText({
+    paste0("Column 1: ", count_filled(col1_ids), "/10 completed")
+  })
+  
+  output$col2_text <- renderText({
+    paste0("Column 2: ", count_filled(col2_ids), "/10 completed")
+  })
+  
+  output$col3_text <- renderText({
+    paste0("Column 3: ", count_filled(col3_ids), "/10 completed")
+  })
+  
+  
+  
+  
+  
+  
+  
+  
   
   # ----- Validation -----
   iv <- shinyvalidate::InputValidator$new()
@@ -1106,6 +1150,18 @@ server <- function(input, output, session) {
       tags$span(workbook_name)
     })
   })
+  
+  ## find and count filled entries for progress indication
+  is_filled <- function(x) {
+    !is.null(x) && !is.na(x) && nzchar(trimws(as.character(x)))
+  }
+  
+  count_filled <- function(ids) {
+    vals <- lapply(ids, function(id) input[[id]])
+    sum(sapply(vals, is_filled))
+  }
+  
+
   
   # ---- Unified Clear form ----
   observeEvent(input$clear_all, {

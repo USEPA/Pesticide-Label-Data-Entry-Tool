@@ -9,6 +9,7 @@ library(stringr)
 library(tibble)
 library(shinyvalidate)
 library(shinythemes)
+library(openxlsx)
 
 # - Manifest 
 #rsconnect::writeManifest()
@@ -51,6 +52,15 @@ ensure_expected_columns <- function(df, expected_labels) {
   df <- dplyr::select(df, dplyr::all_of(expected_labels))
   df <- dplyr::mutate(df, dplyr::across(dplyr::everything(), as.character))
   df
+}
+#adding color identification for new (custom) entries
+is_custom_cell <- function(value, allowed) {
+  if (is.null(value) || is.na(value) || !nzchar(trimws(as.character(value)))) {
+    return(FALSE)
+  }
+  vals <- split_multi(value)
+  if (length(vals) == 0) return(FALSE)
+  any(!vals %in% allowed)
 }
 
 # ---------------- Read vocab from workbook ----------------
@@ -512,7 +522,7 @@ ui <- page_fillable(
       card_footer(
         fluidRow(
           column(4,
-                 downloadButton("dl_scen", "Download CSV", class = "btn-sm"),
+                 downloadButton("dl_scen", "Download Excel", class = "btn-sm"),
                  actionButton("upload_scen", "Upload CSV", icon = icon("upload"), class = "btn-sm btn-secondary")),
           column(4, style = "text-align: center;",
                  actionButton("clone_to_form", "Load selected to Data Entry", class = "btn-sm", icon = icon("sign-in-alt")),
@@ -1139,9 +1149,48 @@ server <- function(input, output, session) {
   })
   
   # ----- Download -----
+  
+  #updated to identify custom entries with red cells
   output$dl_scen <- downloadHandler(
-    filename = function() paste0("entries_", Sys.Date(), ".csv"),
-    content  = function(file) readr::write_csv(scen_dat(), file, na = "")
+    filename = function() paste0("entries_", Sys.Date(), ".xlsx"),
+    content = function(file) {
+      dat <- scen_dat()
+      expected_labels <- c(product_fields, scenario_fields)
+      dat <- ensure_expected_columns(dat, expected_labels)
+      
+      wb <- openxlsx::createWorkbook()
+      openxlsx::addWorksheet(wb, "Entries")
+      openxlsx::writeData(wb, "Entries", dat)
+      
+      # Style for custom entries
+      red_style <- openxlsx::createStyle(fontColour = "#FF0000",fgFill = "#FDE9E7")
+      
+      # Fields to check against vocab
+      picklist_fields <- c(product_fields, scenario_picklist_fields)
+      
+      for (field in picklist_fields) {
+        if (!field %in% names(dat)) next
+        
+        allowed <- vocab()[[field]] %||% character(0)
+        col_idx <- which(names(dat) == field)
+        
+        for (i in seq_len(nrow(dat))) {
+          value <- dat[[field]][i]
+          if (is_custom_cell(value, allowed)) {
+            # +1 because row 1 is the header row in Excel
+            openxlsx::addStyle(
+              wb, "Entries", red_style,
+              rows = i + 1,
+              cols = col_idx,
+              gridExpand = TRUE,
+              stack = TRUE
+            )
+          }
+        }
+      }
+      
+      openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+    }
   )
   
   # - Notebook path display

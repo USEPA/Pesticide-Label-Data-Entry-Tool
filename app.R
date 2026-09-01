@@ -436,10 +436,11 @@ ui <- page_fillable(
               style = "width: 15%;", 
               card_header("Product-Level Inputs"),
               card_body( tags$div(
-                style = "display: flex; align-items: center; gap: 6px;",
-                tags$span("Product Descriptors:"),
+                style = "display: flex; align-items: center;",
+                tags$span(strong("Product Descriptors: ")),
                 textOutput("prod_col_progress", inline = TRUE)),
-                uiOutput("product_form")
+                tags$div(style = "height: 5px;",
+                uiOutput("product_form"))
               )
             ),
             
@@ -464,8 +465,11 @@ ui <- page_fillable(
               card_body(
                 fluidRow(
                   column(3,
-                         h5("Use Site Descriptors"),
-                         tags$div(style = "height: 5px;"),
+                         tags$div(
+                           style = "display: flex; align-items: center;",
+                           tags$span(strong("Use Site Descriptors: "),
+                           textOutput("scen_use_site_col_progress", inline = TRUE))),
+                         tags$div(style = "height: 20px;"),
                          uiOutput("scenario_use_site_col1"),
                          uiOutput("scenario_use_site_col2")),
                   column(3,
@@ -709,8 +713,7 @@ server <- function(input, output, session) {
   # ---- Product form ----
   output$product_form <- renderUI({
     req(vocab())
-    tagList(
-      make_input("EPA Registration Number", "text", prefix = "prod__"),
+    tagList(make_input("EPA Registration Number", "text", prefix = "prod__"),
       make_input("AI Name", "text", prefix = "prod__"),
       make_input("PC Code", "text", prefix = "prod__"),
       make_input("Co-Formulated AI", "pick", choices = NULL, prefix = "prod__", multiple = TRUE, placeholder = "Type each AI name and press enter"),
@@ -766,6 +769,28 @@ server <- function(input, output, session) {
     )
     
   })
+  
+  scen_use_site_texts<-c("Crop Use Site",
+                         "Non Crop Use Site",
+                         "Location",
+                         "App Target",
+                         "App Type",
+                         "App Equipment Type",
+                         "Specific App Equipment",
+                         "App Timing (Site)",
+                         "App Timing (Pest)")
+  
+  scen_use_site_col_ids<-paste0("scen__",idsafe(scen_use_site_texts))
+  
+  
+  
+  #length(prod_col_ids)
+  
+  output$scen_use_site_col_progress<- renderText({
+    paste0("(",count_filled(scen_use_site_col_ids), "/",length(scen_use_site_col_ids),")")
+  })
+  
+  
   
   # ---- Scenario rate columns ----
   output$scenario_rate_col1<-renderUI({
@@ -1153,7 +1178,23 @@ server <- function(input, output, session) {
   
   ## find and count filled entries for progress indication
   is_filled <- function(x) {
-    !is.null(x) && !is.na(x) && nzchar(trimws(as.character(x)))
+    if (is.null(x)) return(FALSE)
+    if (length(x) == 0) return(FALSE)
+    if (all(is.na(x))) return(FALSE)
+    
+    if (is.character(x)) {
+      return(any(nzchar(trimws(x))))
+    }
+    
+    if (is.logical(x)) {
+      return(any(!is.na(x)))
+    }
+    
+    if (is.numeric(x)) {
+      return(any(!is.na(x)))
+    }
+    
+    TRUE
   }
   
   count_filled <- function(ids) {

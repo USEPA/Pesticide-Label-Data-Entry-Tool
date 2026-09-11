@@ -336,6 +336,26 @@ ui <- page_fillable(
       border-radius: 50% !important;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
  }
+ .prod-ai-concentration-stack .ust-rate-row {
+  display: block;
+}
+
+.prod-ai-concentration-stack .ust-numeric {
+  width: 100%;
+  min-width: 100%;
+  margin-bottom: 4px;
+}
+
+.prod-ai-concentration-stack .ust-units {
+  display: flex;
+  justify-content: flex-start;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.prod-ai-concentration-stack .ust-units .ust-unit .selectize-control {
+  min-width: 55px;
+}
     .product-section-bg {
   background-color: #D9EAF7;  /* light blue */
   padding: 8px;
@@ -785,8 +805,16 @@ server <- function(input, output, session) {
       make_input("Co-Formulated AI", "pick", choices = NULL, prefix = "prod__", multiple = TRUE, placeholder = "Type each AI name and press enter"),
       make_input("Physical Form", "pick", choices = vocab()[["Physical Form"]], prefix = "prod__", multiple = TRUE),
       make_input("% AI", "numeric", prefix = "prod__"),
-      make_area_rate_input("AI Concentration", prefix = "prod__",default_num_unit  = scenario_area_rate_defaults[["AI Concentration"]]$num,
-                           default_area_unit = scenario_area_rate_defaults[["AI Concentration"]]$area, allow_weight = TRUE,allow_volume = TRUE),
+      div(class = "prod-ai-concentration-stack",
+          make_area_rate_input(
+            "AI Concentration",
+            prefix = "prod__",
+            default_num_unit  = scenario_area_rate_defaults[["AI Concentration"]]$num,
+            default_area_unit = scenario_area_rate_defaults[["AI Concentration"]]$area,
+            allow_weight = TRUE,
+            allow_volume = TRUE
+          )
+      ),
       make_input("RUP", "pick", choices = vocab()[["RUP"]], prefix = "prod__", multiple = FALSE),
       make_input("Product-level PPE", "pick", choices = vocab()[["Product-level PPE"]], prefix = "prod__", multiple = TRUE)
     )

@@ -972,6 +972,14 @@ server <- function(input, output, session) {
   
   # ----- Validation -----
   iv <- shinyvalidate::InputValidator$new()
+  iv$add_rule("prod__PC_Code", function(value) {
+    if (is.null(value) || !nzchar(trimws(as.character(value)))) return(NULL)
+    
+    if (!grepl("^\\d{6}$", value)) {
+      return("PC Code must be exactly 6 digits")
+    }
+    NULL
+  })
   session$onFlushed(function() {
     for (f in scenario_area_rate_fields) {
       id <- paste0("scen__", idsafe(f))

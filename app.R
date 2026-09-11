@@ -523,7 +523,7 @@ ui <- page_fillable(
         fluidRow(
           column(4,
                  downloadButton("dl_scen", "Download Excel", class = "btn-sm"),
-                 actionButton("upload_scen", "Upload CSV", icon = icon("upload"), class = "btn-sm btn-secondary")),
+                 actionButton("upload_scen", "Upload CSV/Excel", icon = icon("upload"), class = "btn-sm btn-secondary")),
           column(4, style = "text-align: center;",
                  actionButton("clone_to_form", "Load selected to Data Entry", class = "btn-sm", icon = icon("sign-in-alt")),
                  actionButton("dup_scen", "Duplicate selected", class = "btn-sm", icon = icon("copy"))),
@@ -638,27 +638,50 @@ server <- function(input, output, session) {
     removeModal()
     
     expected_labels <- c(product_fields, scenario_fields)
+    ext <- tolower(tools::file_ext(input$file_upload_scenario$name))
     
-    # Read as all-character
     data <- tryCatch({
-      readr::read_csv(
-        input$file_upload_scenario$datapath,
-        col_types = readr::cols(.default = readr::col_character()),
-        show_col_types = FALSE, progress = FALSE
+      if (ext == "csv") {
+        readr::read_csv(
+          input$file_upload_scenario$datapath,
+          col_types = readr::cols(.default = readr::col_character()),
+          show_col_types = FALSE,
+          progress = FALSE
+        )
+      } else if (ext %in% c("xlsx", "xls")) {
+        readxl::read_excel(
+          input$file_upload_scenario$datapath,
+          col_types = "text"
+        ) |> as.data.frame(stringsAsFactors = FALSE)
+      } else {
+        stop(paste("Unsupported file type:", ext))
+      }
+    }, error = function(e) {
+      showNotification(
+        paste("Read error:", conditionMessage(e)),
+        type = "error",
+        duration = 10
       )
-    }, error = function(e) NULL)
+      return(NULL)
+    })
     
     if (is.null(data)) {
-      showNotification("Failed to read file.", type = "error")
       return()
     }
     
-    # Header validation using idsafe
     expected_fields <- purrr::map_chr(expected_labels, idsafe)
     uploaded_fields <- purrr::map_chr(names(data), idsafe)
+    
     if (!all(expected_fields %in% uploaded_fields)) {
-      showNotification("File format does not match expected fields. It should contain all required columns.",
-                       type = "error")
+      showNotification(
+        paste(
+          "Your file format does not match expected fields.",
+          "Missing columns:",
+          paste(setdiff(expected_fields, uploaded_fields), collapse = ", ")
+        ),
+        type = "error",
+        duration = 10
+      )
       return()
     }
     
@@ -1165,8 +1188,27 @@ server <- function(input, output, session) {
       # Style for custom entries
       red_style <- openxlsx::createStyle(fontColour = "#FF0000",fgFill = "#FDE9E7")
       
-      # Fields to check against vocab
-      picklist_fields <- c(product_fields, scenario_picklist_fields)
+      # Only fields that truly use picklists
+      picklist_fields <- c(
+        "Physical Form",
+        "RUP",
+        "Product-level PPE",
+        "Crop Use Site",
+        "Non Crop Use Site",
+        "Location",
+        "App Target",
+        "App Type",
+        "App Equipment Type",
+        "Specific App Equipment",
+        "App Timing (Site)",
+        "App Timing (Pest)",
+        "ASABE Droplet Size",
+        "Buffered Area (Term)",
+        "Pollinator Protection Statement",
+        "Soil Type Restrictions",
+        "Site-Level ALLOWED Geographic Area",
+        "Site-Level PROHIBITED Geographic Area"
+      )
       
       for (field in picklist_fields) {
         if (!field %in% names(dat)) next
@@ -1177,10 +1219,9 @@ server <- function(input, output, session) {
         for (i in seq_len(nrow(dat))) {
           value <- dat[[field]][i]
           if (is_custom_cell(value, allowed)) {
-            # +1 because row 1 is the header row in Excel
             openxlsx::addStyle(
               wb, "Entries", red_style,
-              rows = i + 1,
+              rows = i + 1,  # +1 because row 1 is the header
               cols = col_idx,
               gridExpand = TRUE,
               stack = TRUE
@@ -1192,7 +1233,6 @@ server <- function(input, output, session) {
       openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
     }
   )
-  
   # - Notebook path display
   observeEvent(workbook_path, {
     output$notebook_path_display <- renderUI({

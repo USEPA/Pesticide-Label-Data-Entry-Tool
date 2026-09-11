@@ -335,7 +335,37 @@ ui <- page_fillable(
       justify-content: center !important;
       border-radius: 50% !important;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-    }
+ }
+    .product-section-bg {
+  background-color: #D9EAF7;  /* light blue */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.use-site-section-bg {
+  background-color: #D9EAF7;  /* light blue */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.rate-section-bg {
+  background-color: #FCE5CD;  /* light orange */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.restriction-section-bg {
+  background-color: #F6B26B;  /* Darker orange */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.product-section-bg .shiny-input-container,
+.use-site-section-bg .shiny-input-container,
+.rate-section-bg .shiny-input-container,
+.restriction-section-bg .shiny-input-container {
+  margin-bottom: 4px;
+}
     .bslib-full-screen-enter svg {
       transform: scale(0.75) !important;
     }
@@ -445,11 +475,13 @@ ui <- page_fillable(
               class = "horizontal-resize-card sub-card",
               style = "width: 15%;", 
               card_header("Product-Level Inputs"),
-              card_body( tags$div(
-                style = "display: flex; align-items: center; gap: 6px;",
-                tags$span("Product Descriptors:"),
-                textOutput("prod_col_progress", inline = TRUE)),
-                uiOutput("product_form")
+              card_body(
+                tags$div(
+                  style = "display: flex; align-items: center; gap: 6px;",
+                  tags$span("Product Descriptors:"),
+                  textOutput("prod_col_progress", inline = TRUE)
+                ),
+                div(class = "product-section-bg", uiOutput("product_form"))
               )
             ),
             
@@ -476,18 +508,22 @@ ui <- page_fillable(
                   column(3,
                          h5("Use Site Descriptors"),
                          tags$div(style = "height: 5px;"),
-                         uiOutput("scenario_use_site_col1"),
-                         uiOutput("scenario_use_site_col2")),
+                         div(class = "use-site-section-bg",
+                             uiOutput("scenario_use_site_col1"),
+                             uiOutput("scenario_use_site_col2"))),
                   column(3,
                          h5("Rate Descriptors"),
-                         uiOutput("scenario_rate_col1"),
-                         uiOutput("scenario_rate_col2")),
+                         div(class = "rate-section-bg",
+                             uiOutput("scenario_rate_col1"),
+                             uiOutput("scenario_rate_col2"))),
                   column(3,
                          h5("Restrictions"),
-                         uiOutput("scenario_restrictions_col1")),
+                         div(class = "restriction-section-bg",
+                             uiOutput("scenario_restrictions_col1"))),
                   column(3,
                          h5(" "),
-                         uiOutput("scenario_restrictions_col2"))
+                         div(class = "restriction-section-bg",
+                             uiOutput("scenario_restrictions_col2")))
                 )
               )
             )

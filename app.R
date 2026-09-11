@@ -256,11 +256,11 @@ scenario_fields <- c(
   "Crop Use Site","Non Crop Use Site",
   "Location","App Target","App Type","App Equipment Type","Specific App Equipment",
   "App Timing (Site)","App Timing (Pest)",
-  "Min Diluent Quantity (Gal Spray Soln per Acre)",
   "Product Max Rate/App",
   "AI Max Rate/App","Max # App/Year","Max # App/Crop Cycle",
   "Product Max Rate/Year","Product Max Rate/Crop Cycle",
   "AI Max Rate/Year","AI Max Rate/Crop Cycle",
+  "Min Diluent Quantity (Gal Spray Soln per Acre)",
   "Max Number of Seasons/Crop Cycles per year","RTI (days)","REI (hours)","PHI (days)","PGI (days)","PSI (days)",
   "ASABE Droplet Size","Max Release Height (ft)","Max Wind Speed (mph)",
   "Buffered Area (ft)","Buffered Area (Term)",
@@ -868,11 +868,6 @@ server <- function(input, output, session) {
   output$scenario_rate_col1<-renderUI({
     req(vocab())
     tagList(
-      make_area_rate_input("Min Diluent Quantity (Gal Spray Soln per Acre)",
-                           default_num_unit  = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$num,
-                           default_area_unit = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$area,
-                           prefix = "scen__", allow_weight = FALSE, allow_volume = TRUE
-      ),
       make_area_rate_input(
         "Product Max Rate/App",
         default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/App"]]$num,
@@ -917,7 +912,12 @@ server <- function(input, output, session) {
         default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Crop Cycle"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
       ),
-      make_input("Max Number of Seasons/Crop Cycles per year", "numeric", prefix = "scen__")
+      make_input("Max Number of Seasons/Crop Cycles per year", "numeric", prefix = "scen__"),
+      make_area_rate_input("Min Diluent Quantity (Gal Spray Soln per Acre)",
+                           default_num_unit  = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$num,
+                           default_area_unit = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$area,
+                           prefix = "scen__", allow_weight = FALSE, allow_volume = TRUE
+      )
     )
   })
   
@@ -972,7 +972,7 @@ server <- function(input, output, session) {
   
   # ----- Validation -----
   iv <- shinyvalidate::InputValidator$new()
-  iv$add_rule("prod__PC_Code", function(value) {
+   iv$add_rule("prod__PC_Code", function(value) {
     if (is.null(value) || !nzchar(trimws(as.character(value)))) return(NULL)
     
     if (!grepl("^\\d{6}$", value)) {

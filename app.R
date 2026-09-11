@@ -798,8 +798,7 @@ server <- function(input, output, session) {
   # ---- Product form ----
   output$product_form <- renderUI({
     req(vocab())
-    tagList(
-      make_input("EPA Registration Number", "text", prefix = "prod__"),
+    tagList(make_input("EPA Registration Number", "text", prefix = "prod__"),
       make_input("AI Name", "text", prefix = "prod__"),
       make_input("PC Code", "text", prefix = "prod__"),
       make_input("Co-Formulated AI", "pick", choices = NULL, prefix = "prod__", multiple = TRUE, placeholder = "Type each AI name and press enter"),
@@ -830,12 +829,9 @@ server <- function(input, output, session) {
                   "RUP",
                   "Product-level PPE")
   
-                  prod_col_ids<-paste0("prod__",idsafe(prod_col_texts))
+  prod_col_ids<-paste0("prod__",idsafe(prod_col_texts))
   
-                
-                                  
-  #length(prod_col_ids)
-  
+
   output$prod_col_progress<- renderText({
     paste0("(",count_filled(prod_col_ids), "/",length(prod_col_ids),")")
   })
@@ -863,6 +859,24 @@ server <- function(input, output, session) {
     )
     
   })
+  
+  scen_use_site_texts<-c("Crop Use Site",
+                         "Non Crop Use Site",
+                         "Location",
+                         "App Target",
+                         "App Type",
+                         "App Equipment Type",
+                         "Specific App Equipment",
+                         "App Timing (Site)",
+                         "App Timing (Pest)")
+  
+  scen_use_site_col_ids<-paste0("scen__",idsafe(scen_use_site_texts))
+  
+  output$scen_use_site_col_progress<- renderText({
+    paste0("(",count_filled(scen_use_site_col_ids), "/",length(scen_use_site_col_ids),")")
+  })
+  
+  
   
   # ---- Scenario rate columns ----
   output$scenario_rate_col1<-renderUI({
@@ -921,6 +935,27 @@ server <- function(input, output, session) {
     )
   })
   
+  
+  scen_rate_texts<-c("Min Diluent Quantity (Gal Spray Soln per Acre)",
+                     "Product Max Rate/App",
+                     "AI Max Rate/App",
+                     "Max # App/Year",
+                     "Max # App/Crop Cycle",
+                     "Product Max Rate/Year",
+                     "Product Max Rate/Crop Cycle",
+                     "AI Max Rate/Year",
+                     "AI Max Rate/Crop Cycle",
+                     "Max Number of Seasons/Crop Cycles per year")
+  
+  scen_rate_col_ids<-paste0("scen__",idsafe(scen_rate_texts))
+  
+  
+  output$scen_rate_col_progress<- renderText({
+    paste0("(",count_filled(scen_rate_col_ids), "/",length(scen_rate_col_ids),")")
+  })
+  
+  
+  
   # ---- Scenario restrictions columns ----
   output$scenario_restrictions_col1 <- renderUI({
     req(vocab())
@@ -950,24 +985,28 @@ server <- function(input, output, session) {
     )
   })
   
-  output$col1_text <- renderText({
-    paste0("Column 1: ", count_filled(col1_ids), "/10 completed")
+  scen_restr_texts<-c("RTI (days)",
+                      "REI (hours)",
+                      "PHI (days)",
+                      "PGI (days)",
+                      "PSI (days)",
+                      "ASABE Droplet Size",
+                      "Max Release Height (ft)",
+                      "Max Wind Speed (mph)",
+                      "Buffered Area (ft)",
+                      "Buffered Area (Term)",
+                      "Site-Level ALLOWED Geographic Area",
+                      "Site-Level PROHIBITED Geographic Area",
+                      "Soil Type Restrictions",
+                      "Pollinator Protection Statement",
+                      "Other Site/Scenario Specific Restrictions & Limitations")
+  
+  scen_restr_col_ids<-paste0("scen__",idsafe(scen_restr_texts))
+  
+  
+  output$scen_restr_col_progress<- renderText({
+    paste0("(",count_filled(scen_restr_col_ids), "/",length(scen_restr_col_ids),")")
   })
-  
-  output$col2_text <- renderText({
-    paste0("Column 2: ", count_filled(col2_ids), "/10 completed")
-  })
-  
-  output$col3_text <- renderText({
-    paste0("Column 3: ", count_filled(col3_ids), "/10 completed")
-  })
-  
-  
-  
-  
-  
-  
-  
   
   
   # ----- Validation -----
@@ -1314,7 +1353,23 @@ server <- function(input, output, session) {
   
   ## find and count filled entries for progress indication
   is_filled <- function(x) {
-    !is.null(x) && !is.na(x) && nzchar(trimws(as.character(x)))
+    if (is.null(x)) return(FALSE)
+    if (length(x) == 0) return(FALSE)
+    if (all(is.na(x))) return(FALSE)
+    
+    if (is.character(x)) {
+      return(any(nzchar(trimws(x))))
+    }
+    
+    if (is.logical(x)) {
+      return(any(!is.na(x)))
+    }
+    
+    if (is.numeric(x)) {
+      return(any(!is.na(x)))
+    }
+    
+    TRUE
   }
   
   count_filled <- function(ids) {

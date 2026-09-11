@@ -256,11 +256,11 @@ scenario_fields <- c(
   "Crop Use Site","Non Crop Use Site",
   "Location","App Target","App Type","App Equipment Type","Specific App Equipment",
   "App Timing (Site)","App Timing (Pest)",
-  "Min Diluent Quantity (Gal Spray Soln per Acre)",
   "Product Max Rate/App",
   "AI Max Rate/App","Max # App/Year","Max # App/Crop Cycle",
   "Product Max Rate/Year","Product Max Rate/Crop Cycle",
   "AI Max Rate/Year","AI Max Rate/Crop Cycle",
+  "Min Diluent Quantity (Gal Spray Soln per Acre)",
   "Max Number of Seasons/Crop Cycles per year","RTI (days)","REI (hours)","PHI (days)","PGI (days)","PSI (days)",
   "ASABE Droplet Size","Max Release Height (ft)","Max Wind Speed (mph)",
   "Buffered Area (ft)","Buffered Area (Term)",
@@ -335,7 +335,57 @@ ui <- page_fillable(
       justify-content: center !important;
       border-radius: 50% !important;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-    }
+ }
+ .prod-ai-concentration-stack .ust-rate-row {
+  display: block;
+}
+
+.prod-ai-concentration-stack .ust-numeric {
+  width: 100%;
+  min-width: 100%;
+  margin-bottom: 4px;
+}
+
+.prod-ai-concentration-stack .ust-units {
+  display: flex;
+  justify-content: flex-start;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.prod-ai-concentration-stack .ust-units .ust-unit .selectize-control {
+  min-width: 55px;
+}
+    .product-section-bg {
+  background-color: #D9EAF7;  /* light blue */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.use-site-section-bg {
+  background-color: #D9EAF7;  /* light blue */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.rate-section-bg {
+  background-color: #FCE5CD;  /* light orange */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.restriction-section-bg {
+  background-color: #F6B26B;  /* Darker orange */
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.product-section-bg .shiny-input-container,
+.use-site-section-bg .shiny-input-container,
+.rate-section-bg .shiny-input-container,
+.restriction-section-bg .shiny-input-container {
+  margin-bottom: 4px;
+}
     .bslib-full-screen-enter svg {
       transform: scale(0.75) !important;
     }
@@ -445,12 +495,13 @@ ui <- page_fillable(
               class = "horizontal-resize-card sub-card",
               style = "width: 15%;", 
               card_header("Product-Level Inputs"),
-              card_body( tags$div(
-                style = "display: flex; align-items: center;",
-                tags$span(strong("Product Descriptors: ")),
-                textOutput("prod_col_progress", inline = TRUE)),
-                tags$div(style = "height: 5px;",
-                uiOutput("product_form"))
+              card_body(
+                tags$div(
+                  style = "display: flex; align-items: center; gap: 6px;",
+                  tags$span("Product Descriptors:"),
+                  textOutput("prod_col_progress", inline = TRUE)
+                ),
+                div(class = "product-section-bg", uiOutput("product_form"))
               )
             ),
             
@@ -475,31 +526,24 @@ ui <- page_fillable(
               card_body(
                 fluidRow(
                   column(3,
-                         tags$div(
-                           style = "display: flex; align-items: center;",
-                           tags$span(strong("Use Site Descriptors: "),
-                           textOutput("scen_use_site_col_progress", inline = TRUE))),
-                         tags$div(style = "height: 20px;"),
-                         uiOutput("scenario_use_site_col1"),
-                         uiOutput("scenario_use_site_col2")),
+                         h5("Use Site Descriptors"),
+                         tags$div(style = "height: 5px;"),
+                         div(class = "use-site-section-bg",
+                             uiOutput("scenario_use_site_col1"),
+                             uiOutput("scenario_use_site_col2"))),
                   column(3,
-                         tags$div(
-                           style = "display: flex; align-items: center;",
-                           tags$span(strong("Rate Descriptors: "),
-                                     textOutput("scen_rate_col_progress", inline = TRUE))),
-                         tags$div(style = "height: 20px;"),
-                         uiOutput("scenario_rate_col1"),
-                         uiOutput("scenario_rate_col2")),
+                         h5("Rate Descriptors"),
+                         div(class = "rate-section-bg",
+                             uiOutput("scenario_rate_col1"),
+                             uiOutput("scenario_rate_col2"))),
                   column(3,
-                         tags$div(
-                           style = "display: flex; align-items: center;",
-                           tags$span(strong("Restrictions: "),
-                                     textOutput("scen_restr_col_progress", inline = TRUE))),
-                         tags$div(style = "height: 20px;"),
-                         uiOutput("scenario_restrictions_col1")),
+                         h5("Restrictions"),
+                         div(class = "restriction-section-bg",
+                             uiOutput("scenario_restrictions_col1"))),
                   column(3,
                          h5(" "),
-                         uiOutput("scenario_restrictions_col2"))
+                         div(class = "restriction-section-bg",
+                             uiOutput("scenario_restrictions_col2")))
                 )
               )
             )
@@ -760,8 +804,16 @@ server <- function(input, output, session) {
       make_input("Co-Formulated AI", "pick", choices = NULL, prefix = "prod__", multiple = TRUE, placeholder = "Type each AI name and press enter"),
       make_input("Physical Form", "pick", choices = vocab()[["Physical Form"]], prefix = "prod__", multiple = TRUE),
       make_input("% AI", "numeric", prefix = "prod__"),
-      make_area_rate_input("AI Concentration", prefix = "prod__",default_num_unit  = scenario_area_rate_defaults[["AI Concentration"]]$num,
-                           default_area_unit = scenario_area_rate_defaults[["AI Concentration"]]$area, allow_weight = TRUE,allow_volume = TRUE),
+      div(class = "prod-ai-concentration-stack",
+          make_area_rate_input(
+            "AI Concentration",
+            prefix = "prod__",
+            default_num_unit  = scenario_area_rate_defaults[["AI Concentration"]]$num,
+            default_area_unit = scenario_area_rate_defaults[["AI Concentration"]]$area,
+            allow_weight = TRUE,
+            allow_volume = TRUE
+          )
+      ),
       make_input("RUP", "pick", choices = vocab()[["RUP"]], prefix = "prod__", multiple = FALSE),
       make_input("Product-level PPE", "pick", choices = vocab()[["Product-level PPE"]], prefix = "prod__", multiple = TRUE)
     )
@@ -830,11 +882,6 @@ server <- function(input, output, session) {
   output$scenario_rate_col1<-renderUI({
     req(vocab())
     tagList(
-      make_area_rate_input("Min Diluent Quantity (Gal Spray Soln per Acre)",
-                           default_num_unit  = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$num,
-                           default_area_unit = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$area,
-                           prefix = "scen__", allow_weight = FALSE, allow_volume = TRUE
-      ),
       make_area_rate_input(
         "Product Max Rate/App",
         default_num_unit  = scenario_area_rate_defaults[["Product Max Rate/App"]]$num,
@@ -879,7 +926,12 @@ server <- function(input, output, session) {
         default_area_unit = scenario_area_rate_defaults[["AI Max Rate/Crop Cycle"]]$area,
         prefix = "scen__", allow_weight = TRUE, allow_volume = FALSE
       ),
-      make_input("Max Number of Seasons/Crop Cycles per year", "numeric", prefix = "scen__")
+      make_input("Max Number of Seasons/Crop Cycles per year", "numeric", prefix = "scen__"),
+      make_area_rate_input("Min Diluent Quantity (Gal Spray Soln per Acre)",
+                           default_num_unit  = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$num,
+                           default_area_unit = scenario_area_rate_defaults[["Min Diluent Quantity (Gal Spray Soln per Acre)"]]$area,
+                           prefix = "scen__", allow_weight = FALSE, allow_volume = TRUE
+      )
     )
   })
   
@@ -959,6 +1011,14 @@ server <- function(input, output, session) {
   
   # ----- Validation -----
   iv <- shinyvalidate::InputValidator$new()
+   iv$add_rule("prod__PC_Code", function(value) {
+    if (is.null(value) || !nzchar(trimws(as.character(value)))) return(NULL)
+    
+    if (!grepl("^\\d{6}$", value)) {
+      return("PC Code must be exactly 6 digits")
+    }
+    NULL
+  })
   session$onFlushed(function() {
     for (f in scenario_area_rate_fields) {
       id <- paste0("scen__", idsafe(f))

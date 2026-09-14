@@ -11,8 +11,9 @@ library(shinyvalidate)
 library(shinythemes)
 library(openxlsx)
 
-# - Manifest 
-#rsconnect::writeManifest()
+## - Manifest 
+## uncomment line below to run/update manifest file - needed when packages are added
+# rsconnect::writeManifest()
 
 # ---------------- CONFIG ----------------
 workbook_path <- "data/templates/UST_Active Ingredient (PC Code) UST Report_Template_active.xlsx"

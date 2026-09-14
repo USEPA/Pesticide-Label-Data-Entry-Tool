@@ -356,25 +356,25 @@ ui <- page_fillable(
   min-width: 55px;
 }
     .product-section-bg {
-  background-color: #D9EAF7;  /* light blue */
+  background-color: #D9EAF7;  /* light blueish */
   padding: 8px;
   border-radius: 6px;
 }
 
 .use-site-section-bg {
-  background-color: #D9EAF7;  /* light blue */
+  background-color: #D9EAF7;  /* Also light blueish */
   padding: 8px;
   border-radius: 6px;
 }
 
 .rate-section-bg {
-  background-color: #FCE5CD;  /* light orange */
+  background-color: #FCE5CD;  /* A lovely light orange */
   padding: 8px;
   border-radius: 6px;
 }
 
 .restriction-section-bg {
-  background-color: #F6B26B;  /* Darker orange */
+  background-color: #F6B26B;  /* A bold, darker orange (seems to match the vocab)*/
   padding: 8px;
   border-radius: 6px;
 }

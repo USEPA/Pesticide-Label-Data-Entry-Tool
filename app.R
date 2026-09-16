@@ -491,16 +491,14 @@ ui <- page_fillable(
             id = "card-container",
             
             # First card
-            card(
+            card( 
               class = "horizontal-resize-card sub-card",
               style = "width: 15%;", 
               card_header("Product-Level Inputs"),
-              card_body(
-                tags$div(
-                  style = "display: flex; align-items: center; gap: 6px;",
-                  tags$span("Product Descriptors:"),
-                  textOutput("prod_col_progress", inline = TRUE)
-                ),
+              card_body( 
+                tags$div(style = "display: flex; align-items: center;",
+                tags$span(strong("Product Descriptors:", HTML("&nbsp;"))),
+                textOutput("prod_col_progress", inline = TRUE)),
                 div(class = "product-section-bg", uiOutput("product_form"))
               )
             ),
@@ -523,25 +521,40 @@ ui <- page_fillable(
                   column(4,),
                   column(4,))
               ),
+              # First use-site card
               card_body(
                 fluidRow(
                   column(3,
-                         h5("Use Site Descriptors"),
-                         tags$div(style = "height: 5px;"),
+                         tags$div(
+                           style = "display: flex; align-items: center;",
+                           tags$span(strong("Use Site Descriptors: "),
+                                     textOutput("scen_use_site_col_progress", inline = TRUE))),
+                         tags$div(style = "height: 12px;"),
                          div(class = "use-site-section-bg",
                              uiOutput("scenario_use_site_col1"),
                              uiOutput("scenario_use_site_col2"))),
                   column(3,
-                         h5("Rate Descriptors"),
-                         div(class = "rate-section-bg",
+                         tags$div(
+                           style = "display: flex; align-items: center;",
+                           tags$span(strong("Rate Descriptors: "),
+                                     textOutput("scen_rate_col_progress", inline = TRUE))),
+                         tags$div(style = "height: 12px;"),
+                         div(class = "rate-section-bg", 
                              uiOutput("scenario_rate_col1"),
                              uiOutput("scenario_rate_col2"))),
                   column(3,
-                         h5("Restrictions"),
+                         tags$div(
+                           style = "display: flex; align-items: center;",
+                           tags$span(strong("Restrictions: "),
+                                     textOutput("scen_restr_col_progress", inline = TRUE))),
+                         tags$div(style = "height: 12px;"),
                          div(class = "restriction-section-bg",
                              uiOutput("scenario_restrictions_col1"))),
                   column(3,
-                         h5(" "),
+                         tags$div(
+                           style = "display: flex; align-items: center;",
+                           tags$span(strong(HTML("&nbsp;")))),
+                         tags$div(style = "height: 12px;"),
                          div(class = "restriction-section-bg",
                              uiOutput("scenario_restrictions_col2")))
                 )

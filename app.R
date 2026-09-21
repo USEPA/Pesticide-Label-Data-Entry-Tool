@@ -254,6 +254,7 @@ product_fields <- c(
 )
 
 scenario_fields <- c(
+  "Use Site Nickname",
   "Crop Use Site","Non Crop Use Site",
   "Location","App Target","App Type","App Equipment Type","Specific App Equipment",
   "App Timing (Site)","App Timing (Pest)",
@@ -267,6 +268,7 @@ scenario_fields <- c(
   "Site-Level ALLOWED Geographic Area","Site-Level PROHIBITED Geographic Area",
   "Soil Type Restrictions",
   "Pollinator Protection Statement",
+  "Minimum Runoff Mitigation Points",
   "Other Site/Scenario Specific Restrictions & Limitations"
 )
 
@@ -279,7 +281,7 @@ scenario_picklist_fields <- c(
   "Site-Level ALLOWED Geographic Area","Site-Level PROHIBITED Geographic Area"
 )
 
-scenario_numeric_fields <- c("Buffered Area (ft)")
+scenario_numeric_fields <- c("Buffered Area (ft)","Minimum Runoff Mitigation Points")
 
 scenario_area_rate_fields <- c(
   "Min Diluent Quantity (Gal Spray Soln per Acre)",
@@ -738,20 +740,23 @@ server <- function(input, output, session) {
       return()
     }
     
-    expected_fields <- purrr::map_chr(expected_labels, idsafe)
-    uploaded_fields <- purrr::map_chr(names(data), idsafe)
+    # Normalize field names for comparison
+    expected_fields_safe <- purrr::map_chr(expected_labels, idsafe)
+    uploaded_fields_safe  <- purrr::map_chr(names(data), idsafe)
     
-    if (!all(expected_fields %in% uploaded_fields)) {
+    # Check for truly incompatible columns 
+    # but don't fail just because newer fields are missing
+    missing_fields <- setdiff(expected_fields_safe, uploaded_fields_safe)
+    
+    if (length(missing_fields) > 0) {
       showNotification(
         paste(
-          "Your file format does not match expected fields.",
-          "Missing columns:",
-          paste(setdiff(expected_fields, uploaded_fields), collapse = ", ")
+          "Older file detected. Missing columns will be added as blank:",
+          paste(missing_fields, collapse = ", ")
         ),
-        type = "error",
-        duration = 10
+        type = "message",
+        duration = 8
       )
-      return()
     }
     
     # Coerce to expected schema
@@ -854,6 +859,7 @@ server <- function(input, output, session) {
   output$scenario_use_site_col1<-renderUI({
     req(vocab())
     tagList(
+      make_input("Use Site Nickname", "text", prefix = "scen__"),
       make_input("Crop Use Site", "pick", choices = vocab()[["Crop Use Site"]], prefix = "scen__", multiple = TRUE),
       make_input("Non Crop Use Site", "pick", choices = vocab()[["Non Crop Use Site"]], prefix = "scen__", multiple = TRUE)
     )
@@ -873,7 +879,8 @@ server <- function(input, output, session) {
     
   })
   
-  scen_use_site_texts<-c("Crop Use Site",
+  scen_use_site_texts<-c("Use Site Nickname",
+                         "Crop Use Site",
                          "Non Crop Use Site",
                          "Location",
                          "App Target",
@@ -994,6 +1001,7 @@ server <- function(input, output, session) {
       make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
       make_input("Pollinator Protection Statement", "pick", choices = vocab()[["Pollinator Protection Statement"]], prefix = "scen__", multiple = TRUE),
+      make_input("Minimum Runoff Mitigation Points", "numeric", prefix = "scen__"),
       make_input("Other Site/Scenario Specific Restrictions & Limitations", "textArea", prefix = "scen__")
     )
   })
@@ -1012,6 +1020,7 @@ server <- function(input, output, session) {
                       "Site-Level PROHIBITED Geographic Area",
                       "Soil Type Restrictions",
                       "Pollinator Protection Statement",
+                      "Minimum Runoff Mitigation Points",
                       "Other Site/Scenario Specific Restrictions & Limitations")
   
   scen_restr_col_ids<-paste0("scen__",idsafe(scen_restr_texts))
@@ -1423,6 +1432,7 @@ server <- function(input, output, session) {
     
     # Scenario texts
     scenario_text_fields <- c(
+      "Use Site Nickname",
       "Max # App/Year", "Max # App/Crop Cycle",
       "Max Number of Seasons/Crop Cycles per year",
       "RTI (days)", "REI (hours)", "PHI (days)", "PGI (days)", "PSI (days)",
@@ -1487,6 +1497,7 @@ server <- function(input, output, session) {
     })
     # Numerics
     updateNumericInput(session, "scen__Buffered_Area__ft_", value = NA_real_)
+    updateNumericInput(session, "scen__Minimum_Runoff_Mitigation_Points", value = NA_real_)
     # Area-rate: reset value + units
     for (f in scenario_area_rate_fields) {
       base_id     <- paste0("scen__", idsafe(f))

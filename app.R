@@ -94,7 +94,7 @@ build_vocab <- function(path) {
     "Location"                        = read_vocab_col(path, "Location", "Label"),
     "App Target"                      = read_vocab_col(path, "App. Target", "Label"),
     "App Type"                        = read_vocab_col(path, "App. Type", "Label"),
-    "App Equipment Type"              = read_vocab_range(path, "App. Equipment", "G2:G8"),
+    "App Equipment Type"              = read_vocab_range(path, "App. Equipment", "b2:b62"),
     "Specific App Equipment"          = read_vocab_col(path, "App. Equipment", "Specific Application Equipment"),
     "App Timing (Site)"               = read_vocab_col(path, "App Timing (Site Status)", "Label"),
     "App Timing (Pest)"               = read_vocab_col(path, "App Timing (Pest)", "Label"),

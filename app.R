@@ -190,10 +190,15 @@ make_area_rate_input <- function(field_label,
                      if (allow_volume) volume_units else character(0))
   num_choices   <- unique(num_choices)
   
+  # Making an exception for the Ai Concentration Rate- units not defaulting to rate/area selection
+  den_choices <- if (field_label == "AI Concentration") num_choices else area_units
+  
   if (!default_num_unit %in% num_choices) {
     default_num_unit <- if (allow_weight) "lb" else if (allow_volume) "gal" else num_choices[1]
   }
-  if (!default_area_unit %in% area_units) default_area_unit <- "ac"
+  if (!default_area_unit %in% den_choices) {
+    default_area_unit <- den_choices[1]
+  }
   
   tagList(
     tags$label(class = "form-label", `for` = input_id, field_label),
@@ -214,7 +219,7 @@ make_area_rate_input <- function(field_label,
             span(class = "sep", "/"),
             div(class = "ust-unit",
                 selectizeInput(
-                  areaunit_id, label = NULL, choices = area_units,
+                  areaunit_id, label = NULL, choices = den_choices,
                   selected = default_area_unit, width = NULL,
                   options = list(
                     create = TRUE, createOnBlur = TRUE, persist = TRUE, selectOnTab = TRUE,
@@ -295,13 +300,13 @@ scenario_area_rate_fields <- c(
 
 scenario_area_rate_defaults <- list(
   "Min Diluent Quantity (Gal Spray Soln per Acre)" = list(num ="gal",   area ="ac"),
-  "Product Max Rate/App"                      = list(num = "",   area = ""), #default to nothing
-  "AI Max Rate/App"                                = list(num = "",    area = ""), #default to nothing
+  "Product Max Rate/App"                      = list(num = "fl oz",   area = "ac"), #default to nothing
+  "AI Max Rate/App"                                = list(num = "lb",    area = "ac"), #default to nothing
   "Product Max Rate/Year"                          = list(num = "fl oz", area = "ac"),
   "Product Max Rate/Crop Cycle"                    = list(num = "fl oz", area = "ac"),
   "AI Max Rate/Year"                               = list(num = "lb",    area = "ac"),
   "AI Max Rate/Crop Cycle"                         = list(num = "lb",    area = "ac"),
-  "AI Concentration"                               = list(num="", area="")
+  "AI Concentration"                               = list(num="lbs", area="gal")
 )
 
 # ---------------- UI ----------------
@@ -1422,7 +1427,7 @@ server <- function(input, output, session) {
                          choices = unit_choices_for_field("AI Concentration"),
                          selected = scenario_area_rate_defaults[["AI Concentration"]]$num)
     updateSelectizeInput(session, areaunit_id,
-                         choices = area_units,
+                         choices = unit_choices_for_field("AI Concentration"),
                          selected = scenario_area_rate_defaults[["AI Concentration"]]$area)
     
     updateSelectizeInput(session, "prod__Physical_Form", selected = character(0))

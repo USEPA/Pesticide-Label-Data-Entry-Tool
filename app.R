@@ -22,6 +22,9 @@ workbook_name <- "UST_Active Ingredient (PC Code) UST Report_Template_active.xls
 # Define the bslib theme if you want to apply one
 theme <- bs_theme(version = 5)
 
+# Source files for EPA Header/Footer
+source("R/epa_shell.R", local=TRUE)
+
 # ---------------- Helpers ----------------
 `%||%` <- function(x, y) { if (is.null(x) || length(x) == 0) y else x }
 idsafe <- function(x) gsub("[^A-Za-z0-9_]", "_", x)
@@ -324,7 +327,15 @@ my_theme <- bs_theme(
     "}"
   ))
 
-ui <- page_fillable(
+ui <-tagList(
+  epa_head("UST Data Entry Tool"),
+  tags$body(
+    class = "path-themes not-front has-wide-template",
+    id = "top",
+    epa_banner(),
+    epa_page_header(),
+  
+  page_fillable(
   theme = my_theme,
   tags$head(
     tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png"),
@@ -664,6 +675,9 @@ if (card1.style.height !== '35vh') { // Check if it's not already in minimized s
     border: none; /* Optional: remove borders for tighter layout */
   }
 "))
+),
+epa_footer()
+  )
 )
 
 # ---------------- Server ----------------

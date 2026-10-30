@@ -6,7 +6,7 @@
 # - dark gray background (#3d4551)
 # - EPA seal on the left
 # - Discover / Connect / Ask / Follow in one centered footer area
-# - Follow uses inline SVG icons so they render reliably
+# - Follow is icon-only
 # - no "Contact Us" footer line
 # - banner toggle script retained
 # ============================================================
@@ -130,11 +130,11 @@ epa_head <- function(page_title = "EPA App") {
       }
 
       .usa-banner {
-        text-align: left;
+        text-align: center;
       }
 
       .usa-banner__header {
-        text-align: left;
+        text-align: center;
       }
 
       .usa-banner__inner {
@@ -144,19 +144,32 @@ epa_head <- function(page_title = "EPA App") {
         padding: 0 1rem;
         display: flex;
         align-items: center;
-        justify-content: flex-start;
-        gap: 0.75rem;
+        justify-content: center;
+        gap: 1rem;
         flex-wrap: nowrap;
+      }
+
+      .usa-banner__header .grid-col-auto,
+      .usa-banner__header .grid-col-fill {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .usa-banner__header-flag {
+        display: block;
+        margin: 0;
+        flex: 0 0 auto;
       }
 
       .usa-banner__header-text,
       .usa-banner__header-action {
         margin: 0;
-        text-align: left;
+        text-align: center;
       }
 
       .usa-banner__button {
-        margin-left: auto;
+        margin-left: 1rem;
         flex: 0 0 auto;
       }
 
@@ -425,7 +438,7 @@ epa_head <- function(page_title = "EPA App") {
 
       .menu--social {
         display: flex;
-        gap: 0.75rem;
+        gap: 0.65rem;
         flex-wrap: wrap;
         align-items: center;
         margin-top: 4px;
@@ -449,18 +462,27 @@ epa_head <- function(page_title = "EPA App") {
         color: #dfe1e2;
       }
 
-      .menu--social .menu__link svg {
-  width: 24px;
-  height: 24px;
-  display: block;
-  fill: currentColor !important;
-  stroke: currentColor !important;
-}
+      .menu--social .icon--social {
+        width: 22px;
+        height: 22px;
+      }
 
-.menu--social .menu__link svg * {
-  fill: currentColor !important;
-  stroke: currentColor !important;
-}
+      /* Center the footer content as a single group */
+      .footer__content {
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      .footer__content > a {
+        flex: 0 0 100px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      .footer__content > .footer__column {
+        max-width: 220px;
+      }
 
       @media (max-width: 767px) {
         .footer__content {
@@ -468,7 +490,7 @@ epa_head <- function(page_title = "EPA App") {
           align-items: stretch;
         }
 
-        .footer__epa-seal {
+        .footer__content > a {
           margin: 0 auto 8px auto;
         }
       }
@@ -700,7 +722,8 @@ epa_footer <- function() {
               <li><a href='https://www.epa.gov/foia'>FOIA Requests</a></li>
               <li><a href='https://www.epa.gov/home/frequent-questions-specific-epa-programstopics'>Frequent Questions</a></li>
             </ul>
-           <h1>Follow.</h1>
+
+            <h1>Follow.</h1>
             <ul class='menu menu--social' aria-label='EPA social media links'>
               <li class='menu__item'>
                 <a class='menu__link' aria-label='EPA Facebook' href='https://www.facebook.com/EPA' target='_blank' rel='noopener noreferrer'>

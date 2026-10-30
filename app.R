@@ -100,6 +100,7 @@ build_vocab <- function(path) {
     "App Timing (Pest)"               = read_vocab_col(path, "App Timing (Pest)", "Label"),
     "ASABE Droplet Size"              = read_vocab_col(path, "ASABE Droplet Size", "Label"),
     "Buffered Area (Term)"            = read_vocab_col(path, "Buffered Area", "Term"),
+    "Buffered Area App Method"        = read_vocab_range(path, "App. Equipment", "b2:b62"),
     "Pollinator Protection Statement" = read_vocab_col(path, "Pollinator Protection", "Label"),
     "Soil Type Restrictions"          = read_vocab_col(path, "Soil Type", "Label"),
     "Site-Level ALLOWED Geographic Area"    = read_vocab_col(path, "Geographic Area", "Label"),
@@ -269,7 +270,7 @@ scenario_fields <- c(
   "AI Max Rate/Year","AI Max Rate/Crop Cycle",
   "Max Number of Seasons/Crop Cycles per year","Min Diluent Quantity (Gal Spray Soln per Acre)","RTI (days)","REI (hours)","PHI (days)","PGI (days)","PSI (days)",
   "ASABE Droplet Size","Max Release Height (ft)","Max Wind Speed (mph)",
-  "Buffered Area (ft)","Buffered Area (Term)",
+  "Buffered Area (ft)","Buffered Area (Term)","Buffered Area App Method",
   "Site-Level ALLOWED Geographic Area","Site-Level PROHIBITED Geographic Area",
   "Soil Type Restrictions",
   "Pollinator Protection Statement",
@@ -281,7 +282,7 @@ scenario_picklist_fields <- c(
   "Crop Use Site","Non Crop Use Site",
   "Location","App Target","App Type","App Equipment Type","Specific App Equipment",
   "App Timing (Site)","App Timing (Pest)",
-  "ASABE Droplet Size","Buffered Area (Term)",
+  "ASABE Droplet Size","Buffered Area (Term)","Buffered Area App Method",
   "Pollinator Protection Statement","Soil Type Restrictions",
   "Site-Level ALLOWED Geographic Area","Site-Level PROHIBITED Geographic Area"
 )
@@ -1002,6 +1003,7 @@ server <- function(input, output, session) {
     tagList(
       make_input("Buffered Area (ft)", "numeric", prefix = "scen__"),
       make_input("Buffered Area (Term)", "pick", choices = vocab()[["Buffered Area (Term)"]], prefix = "scen__", multiple = TRUE),
+      make_input("Buffered Area App Method","pick",choices = vocab()[["App Equipment Type"]],prefix = "scen__", multiple = TRUE),
       make_input("Site-Level ALLOWED Geographic Area", "pick", choices = vocab()[["Site-Level ALLOWED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Site-Level PROHIBITED Geographic Area", "pick", choices = vocab()[["Site-Level PROHIBITED Geographic Area"]], prefix = "scen__", multiple = TRUE),
       make_input("Soil Type Restrictions", "pick", choices = vocab()[["Soil Type Restrictions"]], prefix = "scen__", multiple = TRUE),
@@ -1021,6 +1023,7 @@ server <- function(input, output, session) {
                       "Max Wind Speed (mph)",
                       "Buffered Area (ft)",
                       "Buffered Area (Term)",
+                      "Buffered Area App Method",
                       "Site-Level ALLOWED Geographic Area",
                       "Site-Level PROHIBITED Geographic Area",
                       "Soil Type Restrictions",
@@ -1342,6 +1345,7 @@ server <- function(input, output, session) {
         "App Timing (Pest)",
         "ASABE Droplet Size",
         "Buffered Area (Term)",
+        "Buffered Area App Method",
         "Pollinator Protection Statement",
         "Soil Type Restrictions",
         "Site-Level ALLOWED Geographic Area",
@@ -1451,7 +1455,7 @@ server <- function(input, output, session) {
     scenario_select_fields <- c(
       "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
       "App Type", "App Equipment Type", "Specific App Equipment", 
-      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
+      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)","Buffered Area App Method",
       "Pollinator Protection Statement", "Soil Type Restrictions",
       "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area"
     )
@@ -1492,7 +1496,7 @@ server <- function(input, output, session) {
     scenario_select_fields <- c(
       "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
       "App Type", "App Equipment Type", "Specific App Equipment", 
-      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)",
+      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)","Buffered Area App Method",
       "Pollinator Protection Statement", "Soil Type Restrictions",
       "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area"
     )

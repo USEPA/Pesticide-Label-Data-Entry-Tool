@@ -86,7 +86,7 @@ build_vocab <- function(path) {
   list(
     # Product-level
     "Physical Form"                   = read_vocab_col(path, "Physical Form", "Term"),
-    "Product-level PPE"               = read_vocab_col(path, "PPE", "Short Form Terms"),
+    "PPE/Engineering Control"               = read_vocab_col(path, "PPE", "Short Form Terms"),
     "RUP"                             = c("No", "Yes"),
     # Scenario-level
     "Crop Use Site"                   = read_vocab_col(path, "Crop Use Sites", "Label"),
@@ -255,7 +255,7 @@ product_fields <- c(
   "% AI",
   "AI Concentration",
   "RUP",
-  "Product-level PPE"
+  "PPE/Engineering Control"
 )
 
 scenario_fields <- c(
@@ -838,7 +838,7 @@ server <- function(input, output, session) {
           )
       ),
       make_input("RUP", "pick", choices = vocab()[["RUP"]], prefix = "prod__", multiple = FALSE),
-      make_input("Product-level PPE", "pick", choices = vocab()[["Product-level PPE"]], prefix = "prod__", multiple = TRUE)
+      make_input("PPE/Engineering Control", "pick", choices = vocab()[["PPE/Engineering Control"]], prefix = "prod__", multiple = TRUE)
     )
   })
   
@@ -850,7 +850,7 @@ server <- function(input, output, session) {
                   "% AI",
                   "AI Concentration",
                   "RUP",
-                  "Product-level PPE")
+                  "PPE/Engineering Control")
   
   prod_col_ids<-paste0("prod__",idsafe(prod_col_texts))
   
@@ -1215,7 +1215,7 @@ server <- function(input, output, session) {
       id <- paste0("prod__", idsafe(nm))
       val <- row[[nm]][1] %||% ""
       
-      if (nm %in% c("Physical Form", "Product-level PPE")) {
+      if (nm %in% c("Physical Form", "PPE/Engineering Control")) {
         try(updateSelectizeInput(session, id, selected = split_multi(val)), silent = TRUE)
         
       } else if (nm == "Co-Formulated AI") {
@@ -1330,7 +1330,7 @@ server <- function(input, output, session) {
       picklist_fields <- c(
         "Physical Form",
         "RUP",
-        "Product-level PPE",
+        "PPE/Engineering Control",
         "Crop Use Site",
         "Non Crop Use Site",
         "Location",
@@ -1431,7 +1431,7 @@ server <- function(input, output, session) {
                          selected = scenario_area_rate_defaults[["AI Concentration"]]$area)
     
     updateSelectizeInput(session, "prod__Physical_Form", selected = character(0))
-    updateSelectizeInput(session, "prod__Product_level_PPE", selected = character(0))
+    updateSelectizeInput(session, "PPE/Engineering Control", selected = character(0))
     updateSelectizeInput(session, "prod__Co_Formulated_AI", selected = character(0))
     updateSelectizeInput(session, "prod__RUP", selected = NULL)
     

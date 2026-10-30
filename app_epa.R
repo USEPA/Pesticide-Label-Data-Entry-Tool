@@ -320,12 +320,10 @@ my_theme <- bs_theme(
   ))
 
 ui <- tagList(
-  epa_head(page_title = "UST Data Entry Tool"),
-  
+  epa_head("UST Data Entry Tool"),
   tags$body(
     class = "path-themes not-front has-wide-template",
     id = "top",
-    
     epa_banner(),
     epa_page_header(),
     

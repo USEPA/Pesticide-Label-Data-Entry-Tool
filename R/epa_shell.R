@@ -1,17 +1,4 @@
-# ============================================================
-# EPA SHINY SHELL HELPERS - AIRDATA / EPA PAGE STYLE
-# ============================================================
-# Header is left unchanged per request.
-# Footer is centered and styled to match the newer EPA page styling:
-# - dark gray background (#3d4551)
-# - EPA seal on the left
-# - Discover / Connect / Ask / Follow in one centered footer area
-# - Follow is icon-only
-# - no "Contact Us" footer line
-# - banner toggle script retained
-# ============================================================
-
-epa_head <- function(page_title = "EPA App") {
+epa_head <- function(page_title = "EPA Pesticide UST Tool") {
   tags$head(
     HTML("
       <!-- Google Tag Manager -->

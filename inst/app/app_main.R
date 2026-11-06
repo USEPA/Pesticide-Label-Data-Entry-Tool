@@ -19,7 +19,7 @@ library(openxlsx)
 
 get_template_dir <- function() {
   repo_dir <- "inst/app/template"
-  pkg_dir <- system.file("app", "template", package = "epa_ligit")
+  pkg_dir <- system.file("app", "template", package = "EPAligit")
   
   if (dir.exists(repo_dir)) return(repo_dir)
   if (nzchar(pkg_dir) && dir.exists(pkg_dir)) return(pkg_dir)
@@ -45,7 +45,7 @@ theme <- bs_theme(version = 5)
 epa_shell_path <- epa_shell_path <- if (file.exists("inst/app/epa_shell.R")) {
   "inst/app/epa_shell.R"
 } else {
-  system.file("app", "epa_shell.R", package = "epa_ligit")
+  system.file("app", "epa_shell.R", package = "EPAligit")
 }
 
 if (!nzchar(epa_shell_path) || !file.exists(epa_shell_path)) {

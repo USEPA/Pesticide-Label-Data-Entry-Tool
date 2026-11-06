@@ -1,15 +1,10 @@
-Package: epa_ligit
+Package: EPAligit
 Type: Package
 Title: EPA LIGIT Shiny Application
 Version: 0.1.0
-Authors@R: person(
-  given = "Nathan",
-  family = "Pollesch",
-  email = "pollesch.nathan@epa.gov",
-  role = c("aut", "cre")
-)
+Authors@R: person(given = "Nathan",family = "Pollesch",email = "pollesch.nathan@epa.gov",role = c("aut", "cre"))
 Description: Pesticide Label Information Gathering and Input Tool.  This package is a desktop (locally) deployable version to accompany the web version that is in development.
-License: MIT + file LICENSE
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Imports:
@@ -26,3 +21,4 @@ Imports:
     shinythemes,
     openxlsx,
     readr
+RoxygenNote: 7.3.3

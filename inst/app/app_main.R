@@ -13,10 +13,21 @@ library(openxlsx)
 
 ## - Manifest 
 ## uncomment line below to run/update manifest file - needed when packages are added
-# rsconnect::writeManifest()
+#rsconnect::writeManifest()
 
 # ---------------- CONFIG ----------------
-workbook_dir <- "data/templates"
+
+get_template_dir <- function() {
+  repo_dir <- "inst/app/template"
+  pkg_dir <- system.file("app", "template", package = "epa_ligit")
+  
+  if (dir.exists(repo_dir)) return(repo_dir)
+  if (nzchar(pkg_dir) && dir.exists(pkg_dir)) return(pkg_dir)
+  
+  stop("No template directory found in repo or package.")
+}
+
+workbook_dir <- get_template_dir()
 
 list_excel_files <- function(dir) {
   sort(list.files(
@@ -31,7 +42,17 @@ list_excel_files <- function(dir) {
 theme <- bs_theme(version = 5)
 
 # Source files for EPA Header/Footer
-source("R/epa_shell.R", local=TRUE)
+epa_shell_path <- epa_shell_path <- if (file.exists("inst/app/epa_shell.R")) {
+  "inst/app/epa_shell.R"
+} else {
+  system.file("app", "epa_shell.R", package = "epa_ligit")
+}
+
+if (!nzchar(epa_shell_path) || !file.exists(epa_shell_path)) {
+  stop("epa_shell.R not found in repo or package.")
+}
+
+source(epa_shell_path, local = TRUE)
 
 # ---------------- Helpers ----------------
 `%||%` <- function(x, y) { if (is.null(x) || length(x) == 0) y else x }
@@ -53,19 +74,14 @@ extract_number <- function(x) {
   num <- stringr::str_extract(s, "-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?")
   suppressWarnings(as.numeric(num))
 }
-# Coerce uploaded data to the expected schema (all character columns, correct order)
 ensure_expected_columns <- function(df, expected_labels) {
-  # Keep only expected columns
   df <- dplyr::select(df, dplyr::any_of(expected_labels))
-  # Add any missing expected columns as NA_character_
   missing <- setdiff(expected_labels, names(df))
   for (m in missing) df[[m]] <- NA_character_
-  # Reorder to expected order and coerce all to character
   df <- dplyr::select(df, dplyr::all_of(expected_labels))
   df <- dplyr::mutate(df, dplyr::across(dplyr::everything(), as.character))
   df
 }
-#adding color identification for new (custom) entries
 is_custom_cell <- function(value, allowed) {
   if (is.null(value) || is.na(value) || !nzchar(trimws(as.character(value)))) {
     return(FALSE)
@@ -95,11 +111,9 @@ read_vocab_range <- function(path, sheet, range) {
 }
 build_vocab <- function(path) {
   list(
-    # Product-level
     "Physical Form"                   = read_vocab_col(path, "Physical Form", "Term"),
     "PPE/Engineering Control"         = read_vocab_col(path, "PPE", "Short Form Terms"),
     "RUP"                             = c("No", "Yes"),
-    # Scenario-level
     "Crop Use Site"                   = read_vocab_col(path, "Crop Use Sites", "Label"),
     "Non Crop Use Site"               = read_vocab_col(path, "Non Crop Use Sites", "Label"),
     "Location"                        = read_vocab_col(path, "Location", "Label"),
@@ -175,7 +189,7 @@ scenario_area_rate_allowed <- list(
   "Product Max Rate/Crop Cycle"                    = list(allow_weight = TRUE,  allow_volume = TRUE),
   "AI Max Rate/Year"                               = list(allow_weight = TRUE,  allow_volume = FALSE),
   "AI Max Rate/Crop Cycle"                         = list(allow_weight = TRUE,  allow_volume = FALSE),
-  "AI Concentration" = list(allow_weight = TRUE, allow_volume = TRUE)
+  "AI Concentration"                               = list(allow_weight = TRUE, allow_volume = TRUE)
 )
 
 unit_choices_for_field <- function(field) {
@@ -186,7 +200,6 @@ unit_choices_for_field <- function(field) {
   ))
 }
 
-# ---------- UI: numeric + numerator-unit + area-unit ----------
 make_area_rate_input <- function(field_label,
                                  default_num_unit = "lb",
                                  default_area_unit = "ac",
@@ -241,7 +254,6 @@ make_area_rate_input <- function(field_label,
   )
 }
 
-# ---------- Parser to restore units ----------
 parse_rate_units <- function(x, default_num = "lb", default_area = "ac") {
   s <- as.character(x %||% "")
   rest <- sub("^\\s*-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\s*", "", s, perl = TRUE)
@@ -309,7 +321,7 @@ scenario_area_rate_fields <- c(
 
 scenario_area_rate_defaults <- list(
   "Min Diluent Quantity (Gal Spray Soln per Acre)" = list(num ="gal",   area ="ac"),
-  "Product Max Rate/App"                      = list(num = "fl oz",   area = "ac"),
+  "Product Max Rate/App"                           = list(num = "fl oz", area = "ac"),
   "AI Max Rate/App"                                = list(num = "lb",    area = "ac"),
   "Product Max Rate/Year"                          = list(num = "fl oz", area = "ac"),
   "Product Max Rate/Crop Cycle"                    = list(num = "fl oz", area = "ac"),
@@ -332,19 +344,20 @@ my_theme <- bs_theme(
     "}"
   ))
 
-ui <-tagList(
-  epa_head("UST Data Entry Tool"),
-  tags$body(
-    class = "path-themes not-front has-wide-template",
-    id = "top",
-    epa_banner(),
-    epa_page_header(),
-    
-    page_fillable(
-      theme = my_theme,
-      tags$head(
-        tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png"),
-        tags$style(HTML("
+app_ui <- function() {
+  tagList(
+    epa_head("UST Data Entry Tool"),
+    tags$body(
+      class = "path-themes not-front has-wide-template",
+      id = "top",
+      epa_banner(),
+      epa_page_header(),
+      
+      page_fillable(
+        theme = my_theme,
+        tags$head(
+          tags$link(rel = "icon", type = "image/png", href = "PLDET_icon.png"),
+          tags$style(HTML("
  .bslib-full-screen-enter {
       bottom: auto !important;
       top: 1px !important;
@@ -483,151 +496,151 @@ ui <-tagList(
      margin-bottom: 3px;
 }
    ")),
-      ),
-      
-      layout_columns(
-        col_widths=12,
-        gap="0px",
+        ),
         
-        card(
-          full_screen=TRUE,
-          height="65vh",
-          class = "vertical-resize-card",
-          card_header(
-            fluidRow(
-              column(6, tags$strong("UST Data Entry Tool")),
-              column(
-                6,
-                style = "text-align: right;",
-                tags$strong("Active Template:",style="display:inline;"),
-                uiOutput("notebook_path_display", inline = TRUE),
-                downloadLink(
-                  "download_template",
-                  "(download)",
-                  class = "btn btn-link p-0"
+        layout_columns(
+          col_widths = 12,
+          gap = "0px",
+          
+          card(
+            full_screen = TRUE,
+            height = "65vh",
+            class = "vertical-resize-card",
+            card_header(
+              fluidRow(
+                column(6, tags$strong("UST Data Entry Tool")),
+                column(
+                  6,
+                  style = "text-align: right;",
+                  tags$span("Vocabulary and field definitions ", style = "display: inline;"),
+                  downloadLink(
+                    "download_template",
+                    "(download)",
+                    class = "btn btn-link p-0"
+                  )
                 )
               )
-            )
-          ),
-          card_body(
-            layout_columns(
-              gap = "0px",
-              
-              div(
-                style = "display: flex;", 
-                id = "card-container",
+            ),
+            card_body(
+              layout_columns(
+                gap = "0px",
                 
-                card( 
-                  class = "horizontal-resize-card sub-card",
-                  style = "width: 15%;", 
-                  card_header("Product-Level Inputs"),
-                  card_body( 
-                    tags$div(style = "display: flex; align-items: center;",
-                             tags$span(strong("Product Descriptors:", HTML("&nbsp;"))),
-                             textOutput("prod_col_progress", inline = TRUE)),
-                    div(class = "product-section-bg", uiOutput("product_form"))
-                  )
-                ),
-                
-                card(
-                  class = "horizontal-resize-card sub-card",
-                  style = "width: 85%;",
-                  card_header(
-                    fluidRow(
-                      column(4,
-                             "Use-Level Inputs",
-                             actionButton(
-                               inputId = "horizontal-resize-btn",
-                               label = NULL,
-                               icon = icon("arrow-left"),
-                               class = "btn-link",
-                               style = "margin-left: auto;"
-                             )),
-                      column(4,),
-                      column(4,))
+                div(
+                  style = "display: flex;", 
+                  id = "card-container",
+                  
+                  card( 
+                    class = "horizontal-resize-card sub-card",
+                    style = "width: 15%;", 
+                    card_header("Product-Level Inputs"),
+                    card_body( 
+                      tags$div(style = "display: flex; align-items: center;",
+                               tags$span(strong("Product Descriptors:", HTML("&nbsp;"))),
+                               textOutput("prod_col_progress", inline = TRUE)),
+                      div(class = "product-section-bg", uiOutput("product_form"))
+                    )
                   ),
-                  card_body(
-                    fluidRow(
-                      column(3,
-                             tags$div(
-                               style = "display: flex; align-items: center;",
-                               tags$span(strong("Use Site Descriptors: "),
-                                         textOutput("scen_use_site_col_progress", inline = TRUE))),
-                             tags$div(style = "height: 12px;"),
-                             div(class = "use-site-section-bg",
-                                 uiOutput("scenario_use_site_col1"),
-                                 uiOutput("scenario_use_site_col2"))),
-                      column(3,
-                             tags$div(
-                               style = "display: flex; align-items: center;",
-                               tags$span(strong("Rate Descriptors: "),
-                                         textOutput("scen_rate_col_progress", inline = TRUE))),
-                             tags$div(style = "height: 12px;"),
-                             div(class = "rate-section-bg", 
-                                 uiOutput("scenario_rate_col1"),
-                                 uiOutput("scenario_rate_col2"))),
-                      column(3,
-                             tags$div(
-                               style = "display: flex; align-items: center;",
-                               tags$span(strong("Restrictions: "),
-                                         textOutput("scen_restr_col_progress", inline = TRUE))),
-                             tags$div(style = "height: 12px;"),
-                             div(class = "restriction-section-bg",
-                                 uiOutput("scenario_restrictions_col1"))),
-                      column(3,
-                             tags$div(
-                               style = "display: flex; align-items: center;",
-                               tags$span(strong(HTML("&nbsp;")))),
-                             tags$div(style = "height: 12px;"),
-                             div(class = "restriction-section-bg",
-                                 uiOutput("scenario_restrictions_col2")))
+                  
+                  card(
+                    class = "horizontal-resize-card sub-card",
+                    style = "width: 85%;",
+                    card_header(
+                      fluidRow(
+                        column(4,
+                               "Use-Level Inputs",
+                               actionButton(
+                                 inputId = "horizontal-resize-btn",
+                                 label = NULL,
+                                 icon = icon("arrow-left"),
+                                 class = "btn-link",
+                                 style = "margin-left: auto;"
+                               )),
+                        column(4),
+                        column(4)
+                      )
+                    ),
+                    card_body(
+                      fluidRow(
+                        column(3,
+                               tags$div(
+                                 style = "display: flex; align-items: center;",
+                                 tags$span(strong("Use Site Descriptors: "),
+                                           textOutput("scen_use_site_col_progress", inline = TRUE))),
+                               tags$div(style = "height: 12px;"),
+                               div(class = "use-site-section-bg",
+                                   uiOutput("scenario_use_site_col1"),
+                                   uiOutput("scenario_use_site_col2"))),
+                        column(3,
+                               tags$div(
+                                 style = "display: flex; align-items: center;",
+                                 tags$span(strong("Rate Descriptors: "),
+                                           textOutput("scen_rate_col_progress", inline = TRUE))),
+                               tags$div(style = "height: 12px;"),
+                               div(class = "rate-section-bg", 
+                                   uiOutput("scenario_rate_col1"),
+                                   uiOutput("scenario_rate_col2"))),
+                        column(3,
+                               tags$div(
+                                 style = "display: flex; align-items: center;",
+                                 tags$span(strong("Restrictions: "),
+                                           textOutput("scen_restr_col_progress", inline = TRUE))),
+                               tags$div(style = "height: 12px;"),
+                               div(class = "restriction-section-bg",
+                                   uiOutput("scenario_restrictions_col1"))),
+                        column(3,
+                               tags$div(
+                                 style = "display: flex; align-items: center;",
+                                 tags$span(strong(HTML("&nbsp;")))),
+                               tags$div(style = "height: 12px;"),
+                               div(class = "restriction-section-bg",
+                                   uiOutput("scenario_restrictions_col2")))
+                      )
                     )
                   )
                 )
               )
+            ),
+            card_footer(
+              fluidRow(
+                column(4, actionButton("add_entry", "Add row", class = "btn-sm btn-primary", icon = icon("plus"))),
+                column(4),
+                column(4, style = "text-align: right;", 
+                       actionButton("clear_use_only", "Clear Use", class = "btn-sm", icon = icon("eraser")),
+                       actionButton("clear_all", "Clear All", class = "btn-sm", icon = icon("eraser")))
+              )
             )
           ),
-          card_footer(
-            fluidRow(
-              column(4, actionButton("add_entry", "Add row", class = "btn-sm btn-primary", icon = icon("plus"))),
-              column(4),
-              column(4, style = "text-align: right;", 
-                     actionButton("clear_use_only", "Clear Use", class = "btn-sm", icon = icon("eraser")),
-                     actionButton("clear_all", "Clear All", class = "btn-sm", icon = icon("eraser")))
+          card(
+            full_screen = TRUE,
+            height = "35vh",
+            class = "vertical-resize-card",
+            card_header(
+              fluidRow(
+                column(4, "Data Display", 
+                       actionButton("vertical-resize-btn", label = icon("arrow-up"), class = "btn-link")),
+                column(4),
+                column(4, style = "text-align: right;")
+              )
+            ),
+            card_body(
+              div(DTOutput("tbl_scen"), style = "font-size: 85%;")
+            ),
+            card_footer(
+              fluidRow(
+                column(4,
+                       downloadButton("dl_scen", "Download Excel", class = "btn-sm"),
+                       actionButton("upload_scen", "Upload CSV/Excel", icon = icon("upload"), class = "btn-sm btn-secondary")),
+                column(4, style = "text-align: center;",
+                       actionButton("clone_to_form", "Load selected to Data Entry", class = "btn-sm", icon = icon("sign-in-alt")),
+                       actionButton("dup_scen", "Duplicate selected", class = "btn-sm", icon = icon("copy"))),
+                column(4, style = "text-align: right;",
+                       actionButton("del_scen", "Delete selected", class = "btn-sm", icon = icon("remove")))
+              )
             )
           )
         ),
-        card(
-          full_screen=TRUE,
-          height="35vh",
-          class = "vertical-resize-card",
-          card_header(
-            fluidRow(
-              column(4, "Data Display", 
-                     actionButton("vertical-resize-btn", label = icon("arrow-up"), class = "btn-link")),
-              column(4),
-              column(4, style = "text-align: right;")
-            )
-          ),
-          card_body(
-            div(DTOutput("tbl_scen"), style = "font-size: 85%;")
-          ),
-          card_footer(
-            fluidRow(
-              column(4,
-                     downloadButton("dl_scen", "Download Excel", class = "btn-sm"),
-                     actionButton("upload_scen", "Upload CSV/Excel", icon = icon("upload"), class = "btn-sm btn-secondary")),
-              column(4, style = "text-align: center;",
-                     actionButton("clone_to_form", "Load selected to Data Entry", class = "btn-sm", icon = icon("sign-in-alt")),
-                     actionButton("dup_scen", "Duplicate selected", class = "btn-sm", icon = icon("copy"))),
-              column(4, style = "text-align: right;",
-                     actionButton("del_scen", "Delete selected", class = "btn-sm", icon = icon("remove")))
-            )
-          )
-        )
-      ),
-      
-      tags$script(HTML("
+        
+        tags$script(HTML("
     document.getElementById('vertical-resize-btn').addEventListener('click', function() {
       var card1 = document.querySelectorAll('.vertical-resize-card')[0];
       var card2 = document.querySelectorAll('.vertical-resize-card')[1];
@@ -646,8 +659,8 @@ ui <-tagList(
       }
     });
   ")),
-      
-      tags$script(HTML("
+        
+        tags$script(HTML("
     document.getElementById('horizontal-resize-btn').addEventListener('click', function() {
       var cards = document.querySelectorAll('#card-container .horizontal-resize-card');
       var buttonIcon = document.querySelector('#horizontal-resize-btn i');
@@ -665,7 +678,7 @@ ui <-tagList(
       }
     });
   ")),
-      tags$style(HTML("
+        tags$style(HTML("
   #card-container {
     margin: 0;
     padding: 0;
@@ -677,13 +690,14 @@ ui <-tagList(
     border: none;
   }
 "))
-    ),
-    epa_footer()
+      ),
+      epa_footer()
+    )
   )
-)
+}
 
 # ---------------- Server ----------------
-server <- function(input, output, session) {
+app_server <- function(input, output, session) {
   vocab <- reactiveVal(NULL)
   upload_buffer <- reactiveVal(NULL)
   selected_workbook <- reactiveVal(NULL)
@@ -706,7 +720,7 @@ server <- function(input, output, session) {
         "workbook_choice",
         "Select an Excel file:",
         choices = setNames(files, basename(files)),
-        selected = files[1]
+        selected = basename(files[1])
       ),
       footer = tagList(
         modalButton("Cancel"),
@@ -752,7 +766,6 @@ server <- function(input, output, session) {
     tags$span(basename(selected_workbook()))
   })
   
-  # ---------- Load vocab from selected workbook ----------
   observe({
     req(selected_workbook())
     validate(need(file.exists(selected_workbook()),
@@ -760,7 +773,6 @@ server <- function(input, output, session) {
     vocab(build_vocab(selected_workbook()))
   })
   
-  # ---- Upload modal (combined table) ----
   show_upload_modal <- function() {
     modalDialog(
       fileInput("file_upload_scenario", "Choose CSV File", accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")),
@@ -886,7 +898,6 @@ server <- function(input, output, session) {
     }
   }, once = TRUE)
   
-  # ---- Product form ----
   output$product_form <- renderUI({
     req(vocab())
     tagList(make_input("EPA Registration Number", "text", prefix = "prod__"),
@@ -923,10 +934,9 @@ server <- function(input, output, session) {
   prod_col_ids <- paste0("prod__", idsafe(prod_col_texts))
   
   output$prod_col_progress <- renderText({
-    paste0("(",count_filled(prod_col_ids), "/",length(prod_col_ids),")")
+    paste0("(", count_filled(prod_col_ids), "/", length(prod_col_ids), ")")
   })
   
-  # ---- Scenario use site columns ----
   output$scenario_use_site_col1 <- renderUI({
     req(vocab())
     tagList(
@@ -960,13 +970,12 @@ server <- function(input, output, session) {
                            "App Timing (Site)",
                            "App Timing (Pest)")
   
-  scen_use_site_col_ids <- paste0("scen__",idsafe(scen_use_site_texts))
+  scen_use_site_col_ids <- paste0("scen__", idsafe(scen_use_site_texts))
   
   output$scen_use_site_col_progress <- renderText({
-    paste0("(",count_filled(scen_use_site_col_ids), "/",length(scen_use_site_col_ids),")")
+    paste0("(", count_filled(scen_use_site_col_ids), "/", length(scen_use_site_col_ids), ")")
   })
   
-  # ---- Scenario rate columns ----
   output$scenario_rate_col1 <- renderUI({
     req(vocab())
     tagList(
@@ -1034,13 +1043,12 @@ server <- function(input, output, session) {
                        "AI Max Rate/Crop Cycle",
                        "Max Number of Seasons/Crop Cycles per year")
   
-  scen_rate_col_ids <- paste0("scen__",idsafe(scen_rate_texts))
+  scen_rate_col_ids <- paste0("scen__", idsafe(scen_rate_texts))
   
   output$scen_rate_col_progress <- renderText({
-    paste0("(",count_filled(scen_rate_col_ids), "/",length(scen_rate_col_ids),")")
+    paste0("(", count_filled(scen_rate_col_ids), "/", length(scen_rate_col_ids), ")")
   })
   
-  # ---- Scenario restrictions columns ----
   output$scenario_restrictions_col1 <- renderUI({
     req(vocab())
     tagList(
@@ -1088,19 +1096,16 @@ server <- function(input, output, session) {
                         "Minimum Runoff Mitigation Points",
                         "Other Site/Scenario Specific Restrictions & Limitations")
   
-  scen_restr_col_ids <- paste0("scen__",idsafe(scen_restr_texts))
+  scen_restr_col_ids <- paste0("scen__", idsafe(scen_restr_texts))
   
   output$scen_restr_col_progress <- renderText({
-    paste0("(",count_filled(scen_restr_col_ids), "/",length(scen_restr_col_ids),")")
+    paste0("(", count_filled(scen_restr_col_ids), "/", length(scen_restr_col_ids), ")")
   })
   
-  # ----- Validation -----
   iv <- shinyvalidate::InputValidator$new()
   iv$add_rule("prod__PC_Code", function(value) {
     if (is.null(value) || !nzchar(trimws(as.character(value)))) return(NULL)
-    if (!grepl("^\\d{6}$", value)) {
-      return("PC Code must be exactly 6 digits")
-    }
+    if (!grepl("^\\d{6}$", value)) return("PC Code must be exactly 6 digits")
     NULL
   })
   session$onFlushed(function() {
@@ -1125,22 +1130,19 @@ server <- function(input, output, session) {
     iv$enable()
   }, once = TRUE)
   
-  # ----- Collectors -----
   collect_row <- function(input, fields, prefix = "",
                           area_rate_fields = character(0),
                           area_rate_defaults = list()) {
     vals <- vector("list", length(fields))
     names(vals) <- fields
-    
     for (f in fields) {
       id <- paste0(prefix, idsafe(f))
-      
       if (f %in% area_rate_fields) {
         val <- input[[id]]
         if (is.null(val) || is.na(val)) {
           vals[[f]] <- NA_character_
         } else {
-          numu  <- input[[paste0(id, "__numunit")]]  %||% area_rate_defaults[[f]]$num
+          numu  <- input[[paste0(id, "__numunit")]] %||% area_rate_defaults[[f]]$num
           areau <- input[[paste0(id, "__areaunit")]] %||% area_rate_defaults[[f]]$area
           vals[[f]] <- sprintf("%s %s/%s", val, numu, areau)
         }
@@ -1155,9 +1157,9 @@ server <- function(input, output, session) {
         }
       }
     }
-    
     tibble::as_tibble(vals)
   }
+  
   collect_scenario_row <- function(input, fields, prefix,
                                    area_rate_fields,
                                    area_rate_defaults,
@@ -1171,7 +1173,7 @@ server <- function(input, output, session) {
         if (is.null(val) || is.na(val)) {
           vals[[f]] <- NA_character_
         } else {
-          numu  <- input[[paste0(id, "__numunit")]]  %||% area_rate_defaults[[f]]$num
+          numu  <- input[[paste0(id, "__numunit")]] %||% area_rate_defaults[[f]]$num
           areau <- input[[paste0(id, "__areaunit")]] %||% area_rate_defaults[[f]]$area
           vals[[f]] <- sprintf("%s %s/%s", val, numu, areau)
         }
@@ -1192,7 +1194,6 @@ server <- function(input, output, session) {
     tibble::as_tibble(vals)
   }
   
-  # ----- Unified Add row (product + scenario) -----
   observeEvent(input$add_entry, {
     tryCatch({
       if (!iv$is_valid()) {
@@ -1202,14 +1203,12 @@ server <- function(input, output, session) {
       }
       
       expected_labels <- c(product_fields, scenario_fields)
-      
       scen_row <- collect_scenario_row(
         input, scenario_fields, prefix = "scen__",
         area_rate_fields   = scenario_area_rate_fields,
         area_rate_defaults = scenario_area_rate_defaults,
         numeric_fields     = scenario_numeric_fields
       )
-      
       prod_row <- collect_row(
         input, product_fields, prefix = "prod__",
         area_rate_fields   = c("AI Concentration"),
@@ -1265,7 +1264,6 @@ server <- function(input, output, session) {
     for (nm in product_fields) {
       id <- paste0("prod__", idsafe(nm))
       val <- row[[nm]][1] %||% ""
-      
       if (nm %in% c("Physical Form", "PPE/Engineering Control")) {
         try(updateSelectizeInput(session, id, selected = split_multi(val)), silent = TRUE)
       } else if (nm == "Co-Formulated AI") {
@@ -1280,7 +1278,6 @@ server <- function(input, output, session) {
           default_num  = scenario_area_rate_defaults[["AI Concentration"]]$num,
           default_area = scenario_area_rate_defaults[["AI Concentration"]]$area
         )
-        
         try(updateNumericInput(session, id, value = val_num), silent = TRUE)
         try(updateSelectizeInput(session, paste0(id, "__numunit"),
                                  choices = unique(c(unit_choices_for_field(nm), units$num)),
@@ -1362,7 +1359,7 @@ server <- function(input, output, session) {
       openxlsx::addWorksheet(wb, "Entries")
       openxlsx::writeData(wb, "Entries", dat)
       
-      red_style <- openxlsx::createStyle(fontColour = "#FF0000",fgFill = "#FDE9E7")
+      red_style <- openxlsx::createStyle(fontColour = "#FF0000", fgFill = "#FDE9E7")
       
       picklist_fields <- c(
         "Physical Form",
@@ -1388,7 +1385,6 @@ server <- function(input, output, session) {
       
       for (field in picklist_fields) {
         if (!field %in% names(dat)) next
-        
         allowed <- vocab()[[field]] %||% character(0)
         col_idx <- which(names(dat) == field)
         
@@ -1410,6 +1406,17 @@ server <- function(input, output, session) {
     }
   )
   
+  output$download_template <- downloadHandler(
+    filename = function() {
+      req(selected_workbook())
+      basename(selected_workbook())
+    },
+    content = function(file) {
+      req(selected_workbook())
+      file.copy(selected_workbook(), file, overwrite = TRUE)
+    }
+  )
+  
   output$notebook_path_display <- renderUI({
     req(selected_workbook())
     tags$span(basename(selected_workbook()))
@@ -1419,16 +1426,9 @@ server <- function(input, output, session) {
     if (is.null(x)) return(FALSE)
     if (length(x) == 0) return(FALSE)
     if (all(is.na(x))) return(FALSE)
-    
-    if (is.character(x)) {
-      return(any(nzchar(trimws(x))))
-    }
-    if (is.logical(x)) {
-      return(any(!is.na(x)))
-    }
-    if (is.numeric(x)) {
-      return(any(!is.na(x)))
-    }
+    if (is.character(x)) return(any(nzchar(trimws(x))))
+    if (is.logical(x)) return(any(!is.na(x)))
+    if (is.numeric(x)) return(any(!is.na(x)))
     TRUE
   }
   
@@ -1438,10 +1438,7 @@ server <- function(input, output, session) {
   }
   
   observeEvent(input$clear_all, {
-    product_text_fields <- c(
-      "EPA Registration Number", "PC Code", "AI Name",
-      "% AI"
-    )
+    product_text_fields <- c("EPA Registration Number", "PC Code", "AI Name", "% AI")
     lapply(product_text_fields, function(field) {
       id <- paste0("prod__", idsafe(field))
       updateTextInput(session, id, value = "")
@@ -1478,8 +1475,8 @@ server <- function(input, output, session) {
     
     scenario_select_fields <- c(
       "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
-      "App Type", "App Equipment Type", "Specific App Equipment", 
-      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)","Buffered Area App Method",
+      "App Type", "App Equipment Type", "Specific App Equipment",
+      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)", "Buffered Area App Method",
       "Pollinator Protection Statement", "Soil Type Restrictions",
       "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area"
     )
@@ -1496,7 +1493,7 @@ server <- function(input, output, session) {
       areaunit_id <- paste0(base_id, "__areaunit")
       updateNumericInput(session, base_id, value = NA_real_)
       num_choices <- unit_choices_for_field(f)
-      updateSelectizeInput(session, numunit_id,  choices = num_choices,
+      updateSelectizeInput(session, numunit_id, choices = num_choices,
                            selected = scenario_area_rate_defaults[[f]]$num)
       updateSelectizeInput(session, areaunit_id, choices = area_units,
                            selected = scenario_area_rate_defaults[[f]]$area)
@@ -1517,8 +1514,8 @@ server <- function(input, output, session) {
     
     scenario_select_fields <- c(
       "Crop Use Site", "Non Crop Use Site", "Location", "App Target",
-      "App Type", "App Equipment Type", "Specific App Equipment", 
-      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)","Buffered Area App Method",
+      "App Type", "App Equipment Type", "Specific App Equipment",
+      "App Timing (Site)", "App Timing (Pest)", "ASABE Droplet Size", "Buffered Area (Term)", "Buffered Area App Method",
       "Pollinator Protection Statement", "Soil Type Restrictions",
       "Site-Level ALLOWED Geographic Area", "Site-Level PROHIBITED Geographic Area"
     )
@@ -1536,13 +1533,17 @@ server <- function(input, output, session) {
       areaunit_id <- paste0(base_id, "__areaunit")
       updateNumericInput(session, base_id, value = NA_real_)
       num_choices <- unit_choices_for_field(f)
-      updateSelectizeInput(session, numunit_id,  choices = num_choices,
+      updateSelectizeInput(session, numunit_id, choices = num_choices,
                            selected = scenario_area_rate_defaults[[f]]$num)
       updateSelectizeInput(session, areaunit_id, choices = area_units,
                            selected = scenario_area_rate_defaults[[f]]$area)
     }
   })
-  
 }
 
-shinyApp(ui, server)
+run_app <- function() {
+  shiny::shinyApp(
+    ui = app_ui(),
+    server = app_server
+  )
+}

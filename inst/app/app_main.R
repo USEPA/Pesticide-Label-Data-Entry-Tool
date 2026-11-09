@@ -19,7 +19,7 @@ library(openxlsx)
 
 get_template_dir <- function() {
   repo_dir <- "inst/app/template"
-  pkg_dir <- system.file("app", "template", package = "EPAligit")
+  pkg_dir <- system.file("app", "template", package = "epaligt")
   
   if (dir.exists(repo_dir)) return(repo_dir)
   if (nzchar(pkg_dir) && dir.exists(pkg_dir)) return(pkg_dir)
@@ -45,7 +45,7 @@ theme <- bs_theme(version = 5)
 epa_shell_path <- epa_shell_path <- if (file.exists("inst/app/epa_shell.R")) {
   "inst/app/epa_shell.R"
 } else {
-  system.file("app", "epa_shell.R", package = "EPAligit")
+  system.file("app", "epa_shell.R", package = "epaligt")
 }
 
 if (!nzchar(epa_shell_path) || !file.exists(epa_shell_path)) {
@@ -510,7 +510,7 @@ app_ui <- function() {
               fluidRow(
                 column(6, tags$strong("UST Data Entry Tool")),
                 column(
-                  6,
+                  5,
                   style = "text-align: right;",
                   tags$span("Vocabulary and field definitions ", style = "display: inline;"),
                   downloadLink(
@@ -518,7 +518,8 @@ app_ui <- function() {
                     "(download)",
                     class = "btn btn-link p-0"
                   )
-                )
+                ),
+                column(1,"")
               )
             ),
             card_body(
@@ -1547,3 +1548,5 @@ run_app <- function() {
     server = app_server
   )
 }
+## Uncomment below to run the app here for testing
+#run_app()

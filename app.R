@@ -1,6 +1,6 @@
 get_app_main_path <- function() {
   repo_path <- "inst/app/app_main.R"
-  pkg_dir <- system.file("app", package = "EPAligit")
+  pkg_dir <- system.file("app", package = "epaligt")
   pkg_path <- if (nzchar(pkg_dir) && dir.exists(pkg_dir)) file.path(pkg_dir, "app_main.R") else ""
   
   if (file.exists(repo_path)) return(repo_path)
@@ -9,6 +9,6 @@ get_app_main_path <- function() {
   stop("app_main.R not found in repo or installed package.")
 }
 
-app_env <- new.env(parent = baseenv())
+app_env <- new.env(parent = globalenv())
 sys.source(get_app_main_path(), envir = app_env)
 app_env$run_app()
